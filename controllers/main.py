@@ -128,7 +128,8 @@ class SdlcCrmWoodpecker(http.Controller):
 
     # Plain-HTTP endpoint: this is the one Woodpecker / Zapier / Make POST to,
     # since they send a raw JSON body (no JSON-RPC envelope).
-    @http.route('/sdlc_crm/woodpecker', type='http', auth='public', methods=['POST'], csrf=False)
+    @http.route(['/sdlc_crm/woodpecker', '/webhooks/woodpecker'],
+                type='http', auth='public', methods=['POST'], csrf=False)
     def woodpecker_http(self, **kwargs):
         body = request.httprequest.get_data() or b'{}'
         # Optional: log the raw payload so the first live Woodpecker POST reveals
