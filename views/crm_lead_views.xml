@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Deal form: multi-contact, per-deal currency, AC status, score,
+         and smart buttons to stage history / journey events. -->
+    <record id="crm_lead_view_form_sdlc" model="ir.ui.view">
+        <field name="name">crm.lead.form.sdlc</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button class="oe_stat_button" type="object" icon="fa-history"
+                        name="action_view_stage_history"
+                        invisible="journey_event_count == 0 and contact_count == 0">
+                    <field name="journey_event_count" widget="statinfo" string="Events"/>
+                </button>
+            </xpath>
+
+            <xpath expr="//field[@name='expected_revenue']" position="after">
+                <field name="deal_currency_id" groups="base.group_multi_currency"/>
+                <field name="expected_revenue_company" groups="base.group_multi_currency"/>
+            </xpath>
+
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="account_id" options="{'no_create': True}"/>
+                <field name="ac_deal_status" readonly="1"/>
+                <field name="deal_score"/>
+            </xpath>
+
+            <xpath expr="//notebook" position="inside">
+                <page string="Deal Contacts" name="deal_contacts">
+                    <field name="contact_ids">
+                        <list editable="bottom">
+                            <field name="name"/>
+                            <field name="email"/>
+                            <field name="phone"/>
+                            <field name="function"/>
+                            <field name="contact_score"/>
+                        </list>
+                    </field>
+                    <field name="contact_count" invisible="1"/>
+                </page>
+                <page string="Stage History" name="stage_history">
+                    <field name="stage_history_ids" readonly="1">
+                        <list>
+                            <field name="stage_id"/>
+                            <field name="previous_stage_id"/>
+                            <field name="date_entered"/>
+                            <field name="date_left"/>
+                            <field name="duration_hours" widget="float_time"/>
+                            <field name="user_id"/>
+                        </list>
+                    </field>
+                </page>
+                <page string="Journey Events" name="journey_events">
+                    <field name="journey_event_ids" readonly="1">
+                        <list>
+                            <field name="create_date"/>
+                            <field name="event"/>
+                            <field name="value_from"/>
+                            <field name="value_to"/>
+                            <field name="note"/>
+                            <field name="user_id"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- Show the deal score on the pipeline kanban card as a priority signal. -->
+    <record id="crm_case_kanban_view_leads_sdlc" model="ir.ui.view">
+        <field name="name">crm.lead.kanban.sdlc</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='probability']" position="after">
+                <field name="deal_score"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

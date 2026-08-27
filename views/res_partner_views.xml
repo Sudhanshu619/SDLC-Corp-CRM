@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_partner_view_form_sdlc" model="ir.ui.view">
+        <field name="name">res.partner.form.sdlc</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='function']" position="after">
+                <field name="contact_score"/>
+                <field name="crm_handoff_done" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

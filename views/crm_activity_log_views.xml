@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Task Overview report source (blueprint B12/E4/E7). -->
+    <record id="crm_activity_log_view_list" model="ir.ui.view">
+        <field name="name">crm.activity.log.list</field>
+        <field name="model">crm.activity.log</field>
+        <field name="arch" type="xml">
+            <list default_order="date_done desc">
+                <field name="date_done"/>
+                <field name="activity_type_id"/>
+                <field name="outcome_id"/>
+                <field name="sentiment" widget="badge"
+                       decoration-success="sentiment == 'positive'"
+                       decoration-danger="sentiment == 'negative'"/>
+                <field name="user_id"/>
+                <field name="lead_id"/>
+                <field name="partner_id"/>
+                <field name="duration_hours" widget="float_time"/>
+                <field name="overdue"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="crm_activity_log_view_pivot" model="ir.ui.view">
+        <field name="name">crm.activity.log.pivot</field>
+        <field name="model">crm.activity.log</field>
+        <field name="arch" type="xml">
+            <pivot string="Task Overview">
+                <field name="user_id" type="row"/>
+                <field name="sentiment" type="col"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="crm_activity_log_view_graph" model="ir.ui.view">
+        <field name="name">crm.activity.log.graph</field>
+        <field name="model">crm.activity.log</field>
+        <field name="arch" type="xml">
+            <graph string="Task Overview" type="bar">
+                <field name="activity_type_id"/>
+                <field name="sentiment"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="crm_activity_log_view_search" model="ir.ui.view">
+        <field name="name">crm.activity.log.search</field>
+        <field name="model">crm.activity.log</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="user_id"/>
+                <field name="activity_type_id"/>
+                <field name="outcome_id"/>
+                <filter name="positive" string="Positive" domain="[('sentiment', '=', 'positive')]"/>
+                <filter name="negative" string="Negative" domain="[('sentiment', '=', 'negative')]"/>
+                <separator/>
+                <filter name="overdue" string="Was Overdue" domain="[('overdue', '=', True)]"/>
+                <group>
+                    <filter name="g_user" string="Rep" context="{'group_by': 'user_id'}"/>
+                    <filter name="g_type" string="Task Type" context="{'group_by': 'activity_type_id'}"/>
+                    <filter name="g_outcome" string="Outcome" context="{'group_by': 'outcome_id'}"/>
+                    <filter name="g_sentiment" string="Sentiment" context="{'group_by': 'sentiment'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_crm_activity_log" model="ir.actions.act_window">
+        <field name="name">Task Overview</field>
+        <field name="res_model">crm.activity.log</field>
+        <field name="view_mode">pivot,graph,list</field>
+    </record>
+</odoo>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- AC ships Call / Email / Lunch / Meeting task types. Odoo already has
+         Call/Email/Meeting/To-Do; we add Lunch for parity. -->
+    <record id="mail_activity_data_lunch" model="mail.activity.type">
+        <field name="name">Lunch</field>
+        <field name="icon">fa-cutlery</field>
+        <field name="delay_count">2</field>
+        <field name="delay_unit">days</field>
+        <field name="res_model">crm.lead</field>
+    </record>
+</odoo>

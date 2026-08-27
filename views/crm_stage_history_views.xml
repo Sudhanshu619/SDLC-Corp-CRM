@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="crm_stage_history_view_list" model="ir.ui.view">
+        <field name="name">crm.stage.history.list</field>
+        <field name="model">crm.stage.history</field>
+        <field name="arch" type="xml">
+            <list default_order="date_entered desc">
+                <field name="lead_id"/>
+                <field name="stage_id"/>
+                <field name="previous_stage_id"/>
+                <field name="date_entered"/>
+                <field name="date_left"/>
+                <field name="duration_hours" widget="float_time" sum="Total hours"/>
+                <field name="user_id"/>
+                <field name="team_id"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Stage velocity: average time-in-stage per stage/pipeline. -->
+    <record id="crm_stage_history_view_pivot" model="ir.ui.view">
+        <field name="name">crm.stage.history.pivot</field>
+        <field name="model">crm.stage.history</field>
+        <field name="arch" type="xml">
+            <pivot string="Stage Velocity">
+                <field name="stage_id" type="row"/>
+                <field name="duration_hours" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_crm_stage_history" model="ir.actions.act_window">
+        <field name="name">Stage Velocity</field>
+        <field name="res_model">crm.stage.history</field>
+        <field name="view_mode">pivot,list</field>
+    </record>
+</odoo>

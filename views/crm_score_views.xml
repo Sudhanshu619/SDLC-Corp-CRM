@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="crm_score_view_list" model="ir.ui.view">
+        <field name="name">crm.score.list</field>
+        <field name="model">crm.score</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="subject"/>
+                <field name="expiry_days"/>
+                <field name="rule_count"/>
+                <field name="ledger_count"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="crm_score_view_form" model="ir.ui.view">
+        <field name="name">crm.score.form</field>
+        <field name="model">crm.score</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_recompute_all" type="object" string="Recompute All"
+                            class="btn-primary"
+                            help="Re-evaluate every rule and roll totals onto the subject records."/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="e.g. Contact MQL Score"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="subject"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="expiry_days"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Rules" name="rules">
+                            <field name="rule_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="domain" widget="domain"
+                                           options="{'model': 'subject', 'in_dialog': True}"/>
+                                    <field name="points"/>
+                                    <field name="evaluation_mode"/>
+                                    <field name="active" widget="boolean_toggle"/>
+                                    <field name="subject" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Ledger" name="ledger">
+                            <field name="ledger_ids" readonly="1">
+                                <list default_order="date_award desc">
+                                    <field name="date_award"/>
+                                    <field name="res_id"/>
+                                    <field name="rule_id"/>
+                                    <field name="points"/>
+                                    <field name="date_expiry"/>
+                                    <field name="expired"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_crm_score" model="ir.actions.act_window">
+        <field name="name">Scores</field>
+        <field name="res_model">crm.score</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="crm_stage_form_sdlc" model="ir.ui.view">
+        <field name="name">crm.stage.form.sdlc</field>
+        <field name="model">crm.stage</field>
+        <field name="inherit_id" ref="crm.crm_stage_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='is_won']" position="after">
+                <field name="default_activity_type_id"/>
+                <field name="default_activity_summary"
+                       invisible="not default_activity_type_id"/>
+                <field name="default_activity_delay"
+                       invisible="not default_activity_type_id"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

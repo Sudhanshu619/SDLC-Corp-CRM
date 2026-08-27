@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Reporting + config menus grafted under the native CRM menu, so the
+         AC-style features live alongside the pipeline users already know.
+
+         Top-level order under the CRM app:
+             0  Dashboards   (this module)
+             1  Sales        (native crm_menu_sales: pipeline / deals)
+             5  Leads        (native)
+            20  Reporting    (native)
+            55  Scoring      (this module)
+            60  AC Reports   (this module)
+            25  Configuration(native) -->
+
+    <!-- ================================================================
+         1) DASHBOARDS  (first)
+         ================================================================ -->
+    <menuitem id="menu_sdlc_crm_dashboard"
+              name="Dashboards"
+              parent="crm.crm_menu_root"
+              action="action_sdlc_crm_dashboard_kpi"
+              sequence="0"/>
+
+    <!-- Sales stays native (crm.crm_menu_sales): My Pipeline / My Activities /
+         Teams / Customers, ordered right after Dashboards. -->
+
+    <!-- ================================================================
+         2) SCORING (intelligence)
+         ================================================================ -->
+    <menuitem id="menu_sdlc_crm_intelligence"
+              name="Scoring"
+              parent="crm.crm_menu_root"
+              sequence="55"/>
+
+    <menuitem id="menu_sdlc_scores"
+              name="Score Models"
+              parent="menu_sdlc_crm_intelligence"
+              action="action_crm_score"
+              sequence="10"/>
+
+    <menuitem id="menu_sdlc_tracked_events"
+              name="Behavioural Events"
+              parent="menu_sdlc_crm_intelligence"
+              action="action_crm_tracked_event"
+              sequence="20"/>
+
+    <!-- ================================================================
+         4) AC REPORTS
+         ================================================================ -->
+    <menuitem id="menu_sdlc_crm_reporting"
+              name="AC Reports"
+              parent="crm.crm_menu_root"
+              sequence="60"/>
+
+    <menuitem id="menu_sdlc_task_overview"
+              name="Task Overview"
+              parent="menu_sdlc_crm_reporting"
+              action="action_crm_activity_log"
+              sequence="10"/>
+
+    <menuitem id="menu_sdlc_stage_velocity"
+              name="Stage Velocity"
+              parent="menu_sdlc_crm_reporting"
+              action="action_crm_stage_history"
+              sequence="20"/>
+
+    <menuitem id="menu_sdlc_journey_events"
+              name="Journey Events"
+              parent="menu_sdlc_crm_reporting"
+              action="action_crm_journey_event"
+              sequence="30"/>
+
+    <!-- ================================================================
+         5) CONFIGURATION (grafted into native config)
+         ================================================================ -->
+    <menuitem id="menu_sdlc_task_outcomes"
+              name="Task Outcomes"
+              parent="crm.crm_menu_config"
+              action="action_crm_activity_outcome"
+              sequence="50"
+              groups="sales_team.group_sale_manager"/>
+</odoo>

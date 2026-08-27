@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wire the self-propelling stage->task loop onto the default CRM stages
+         so the flow is demonstrable out of the box (blueprint B5). -->
+    <function model="crm.stage" name="write">
+        <value model="crm.stage" eval="[ref('crm.stage_lead1')]"/>
+        <value eval="{
+            'default_activity_type_id': ref('mail.mail_activity_data_call'),
+            'default_activity_summary': 'Qualify: first call',
+            'default_activity_delay': 1,
+        }"/>
+    </function>
+
+    <function model="crm.stage" name="write">
+        <value model="crm.stage" eval="[ref('crm.stage_lead2')]"/>
+        <value eval="{
+            'default_activity_type_id': ref('mail.mail_activity_data_meeting'),
+            'default_activity_summary': 'Discovery meeting',
+            'default_activity_delay': 2,
+        }"/>
+    </function>
+
+    <function model="crm.stage" name="write">
+        <value model="crm.stage" eval="[ref('crm.stage_lead3')]"/>
+        <value eval="{
+            'default_activity_type_id': ref('mail.mail_activity_data_email'),
+            'default_activity_summary': 'Send proposal',
+            'default_activity_delay': 2,
+        }"/>
+    </function>
+
+    <!-- A demo behavioural event, so scoring/tracking has something to show. -->
+    <record id="demo_event_pricing" model="crm.tracked.event">
+        <field name="name">pricing_viewed</field>
+        <field name="event_type">page_visit</field>
+        <field name="url">https://example.com/pricing</field>
+    </record>
+</odoo>

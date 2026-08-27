@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Manual test harness for the Woodpecker -> CRM flow. -->
+    <record id="crm_woodpecker_simulator_form" model="ir.ui.view">
+        <field name="name">crm.woodpecker.simulator.form</field>
+        <field name="model">crm.woodpecker.simulator</field>
+        <field name="arch" type="xml">
+            <form string="Log Woodpecker Event">
+                <sheet>
+                    <div class="oe_title">
+                        <h2>Simulate a Woodpecker event</h2>
+                        <p class="text-muted">
+                            Fires the same path as the <code>/sdlc_crm/woodpecker</code>
+                            webhook: resolve-or-create the contact, award engagement
+                            points, and — if the score crosses 75 — open a deal.
+                        </p>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="email" placeholder="jane@acme.com"/>
+                            <field name="contact_name" placeholder="Jane Doe"/>
+                            <field name="company_name" placeholder="Acme Inc"/>
+                        </group>
+                        <group>
+                            <field name="event_type"/>
+                            <field name="campaign_name"/>
+                            <field name="url" invisible="event_type != 'email_clicked'"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_log" string="Log Event" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_crm_woodpecker_simulator" model="ir.actions.act_window">
+        <field name="name">Log Woodpecker Event (test)</field>
+        <field name="res_model">crm.woodpecker.simulator</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_sdlc_woodpecker_sim"
+              name="Log Woodpecker Event (test)"
+              parent="menu_sdlc_crm_intelligence"
+              action="action_crm_woodpecker_simulator"
+              sequence="30"/>
+
+</odoo>

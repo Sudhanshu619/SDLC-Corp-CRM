@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Decay / dynamic scoring: run 'every'-mode rules on a cadence.
+         AC's canonical decay bleeds points every 2 days of inactivity. -->
+    <record id="cron_score_dynamic" model="ir.cron">
+        <field name="name">SDLC CRM: Evaluate dynamic (decay) score rules</field>
+        <field name="model_id" ref="model_crm_score"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_evaluate_dynamic()</field>
+        <field name="interval_number">2</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+
+    <!-- Expire points: recompute totals so expired ledger rows drop out.
+         Blueprint F2 #9: without this the ledger's influence never expires. -->
+    <record id="cron_score_expire" model="ir.cron">
+        <field name="name">SDLC CRM: Expire score points</field>
+        <field name="model_id" ref="model_crm_score"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_expire_points()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+
+    <!-- Static (once-mode) evaluation sweep, e.g. to back-fill new contacts.
+         Runs hourly; 'once' rules are idempotent so this is cheap. -->
+    <record id="cron_score_static" model="ir.cron">
+        <field name="name">SDLC CRM: Evaluate static score rules (back-fill)</field>
+        <field name="model_id" ref="model_crm_score"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_evaluate_dynamic()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="active" eval="True"/>
+    </record>
+
+    <!-- Native Woodpecker integration: poll the Woodpecker REST API for replied
+         prospects and feed them into the reply->score->deal flow. Inactive by
+         default; enable it after setting System Parameter
+         'sdlc_crm.woodpecker_api_key'. Safe to run without a key (no-ops). -->
+    <record id="cron_woodpecker_poll" model="ir.cron">
+        <field name="name">SDLC CRM: Poll Woodpecker replies</field>
+        <field name="model_id" ref="model_crm_tracked_event"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_poll_woodpecker_replies()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="False"/>
+    </record>
+
+</odoo>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Ensure the Odoo administrator holds full SDLC Sales CRM manager rights
+         (see-all deals, manage scores/outcomes, all reports & dashboard).
+         (4, ...) links the group without touching the admin's other groups. -->
+    <record id="base.user_admin" model="res.users">
+        <field name="group_ids" eval="[(4, ref('group_sdlc_crm_manager'))]"/>
+    </record>
+</odoo>

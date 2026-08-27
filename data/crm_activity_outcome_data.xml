@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Task outcomes with sentiment (blueprint A4.3). Sentiment powers the
+         Task Overview positive/negative split. Outcomes are reusable across
+         task types via the M2M. -->
+
+    <record id="outcome_connected" model="crm.activity.outcome">
+        <field name="name">Connected / Spoke</field>
+        <field name="sentiment">positive</field>
+        <field name="sequence">10</field>
+        <field name="activity_type_ids" eval="[(6, 0, [ref('mail.mail_activity_data_call'), ref('mail.mail_activity_data_meeting')])]"/>
+    </record>
+
+    <record id="outcome_meeting_scheduled" model="crm.activity.outcome">
+        <field name="name">Meeting Scheduled</field>
+        <field name="sentiment">positive</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <record id="outcome_left_message" model="crm.activity.outcome">
+        <field name="name">Left Voicemail / Message</field>
+        <field name="sentiment">neutral</field>
+        <field name="sequence">30</field>
+        <field name="activity_type_ids" eval="[(6, 0, [ref('mail.mail_activity_data_call')])]"/>
+    </record>
+
+    <record id="outcome_no_response" model="crm.activity.outcome">
+        <field name="name">No Response</field>
+        <field name="sentiment">negative</field>
+        <field name="sequence">40</field>
+    </record>
+
+    <record id="outcome_not_a_fit" model="crm.activity.outcome">
+        <field name="name">Not a Fit</field>
+        <field name="sentiment">negative</field>
+        <field name="sequence">50</field>
+    </record>
+
+    <record id="outcome_interested" model="crm.activity.outcome">
+        <field name="name">Interested / Positive Reply</field>
+        <field name="sentiment">positive</field>
+        <field name="sequence">15</field>
+        <field name="activity_type_ids" eval="[(6, 0, [ref('mail.mail_activity_data_email')])]"/>
+    </record>
+</odoo>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="crm_journey_event_view_list" model="ir.ui.view">
+        <field name="name">crm.journey.event.list</field>
+        <field name="model">crm.journey.event</field>
+        <field name="arch" type="xml">
+            <list default_order="create_date desc" create="false">
+                <field name="create_date"/>
+                <field name="event"/>
+                <field name="res_model"/>
+                <field name="lead_id"/>
+                <field name="partner_id"/>
+                <field name="value_from"/>
+                <field name="value_to"/>
+                <field name="note"/>
+                <field name="user_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="crm_journey_event_view_search" model="ir.ui.view">
+        <field name="name">crm.journey.event.search</field>
+        <field name="model">crm.journey.event</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="lead_id"/>
+                <field name="partner_id"/>
+                <field name="event"/>
+                <group>
+                    <filter name="g_event" string="Event" context="{'group_by': 'event'}"/>
+                    <filter name="g_model" string="Model" context="{'group_by': 'res_model'}"/>
+                    <filter name="g_user" string="User" context="{'group_by': 'user_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_crm_journey_event" model="ir.actions.act_window">
+        <field name="name">Journey Events (flow trail)</field>
+        <field name="res_model">crm.journey.event</field>
+        <field name="view_mode">list</field>
+    </record>
+</odoo>

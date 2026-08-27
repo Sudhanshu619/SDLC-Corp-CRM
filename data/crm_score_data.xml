@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- ============================================================
+         DEAL SCORE - the canonical AC decay pattern (blueprint B3):
+         start at 100 on entry, then bleed points for inactivity so the
+         pipeline becomes a decay-based priority queue.
+         ============================================================ -->
+    <record id="score_deal_priority" model="crm.score">
+        <field name="name">Deal Priority (decay)</field>
+        <field name="subject">crm.lead</field>
+        <field name="expiry_days">0</field>
+    </record>
+
+    <record id="score_rule_deal_opened" model="crm.score.rule">
+        <field name="score_id" ref="score_deal_priority"/>
+        <field name="name">Deal opened</field>
+        <field name="sequence">10</field>
+        <field name="domain">[('ac_deal_status', '=', 'open')]</field>
+        <field name="points">100</field>
+        <field name="evaluation_mode">once</field>
+    </record>
+
+    <record id="score_rule_deal_stall" model="crm.score.rule">
+        <field name="score_id" ref="score_deal_priority"/>
+        <field name="name">No stage movement in 14 days</field>
+        <field name="sequence">20</field>
+        <field name="domain">[('ac_deal_status', '=', 'open'), ('date_last_stage_update', '&lt;=', datetime.datetime.now() - relativedelta(days=14))]</field>
+        <field name="points">-10</field>
+        <field name="evaluation_mode">every</field>
+    </record>
+
+    <record id="score_rule_deal_proposal" model="crm.score.rule">
+        <field name="score_id" ref="score_deal_priority"/>
+        <field name="name">Reached a Won stage</field>
+        <field name="sequence">30</field>
+        <field name="domain">[('stage_id.is_won', '=', True)]</field>
+        <field name="points">25</field>
+        <field name="evaluation_mode">once</field>
+    </record>
+
+    <!-- ============================================================
+         CONTACT SCORE - fit + intent, driving the marketing/sales
+         handoff at threshold 75 (blueprint B3).
+         ============================================================ -->
+    <record id="score_contact_mql" model="crm.score">
+        <field name="name">Contact MQL Score</field>
+        <field name="subject">res.partner</field>
+        <field name="expiry_days">90</field>
+    </record>
+
+    <record id="score_rule_contact_email" model="crm.score.rule">
+        <field name="score_id" ref="score_contact_mql"/>
+        <field name="name">Has a business email</field>
+        <field name="sequence">10</field>
+        <field name="domain">[('email', '!=', False), ('is_company', '=', False)]</field>
+        <field name="points">10</field>
+        <field name="evaluation_mode">once</field>
+    </record>
+
+    <record id="score_rule_contact_phone" model="crm.score.rule">
+        <field name="score_id" ref="score_contact_mql"/>
+        <field name="name">Has a phone number (fit)</field>
+        <field name="sequence">20</field>
+        <field name="domain">[('phone', '!=', False)]</field>
+        <field name="points">15</field>
+        <field name="evaluation_mode">once</field>
+    </record>
+
+    <record id="score_rule_contact_company" model="crm.score.rule">
+        <field name="score_id" ref="score_contact_mql"/>
+        <field name="name">Belongs to a company (fit)</field>
+        <field name="sequence">30</field>
+        <field name="domain">[('parent_id', '!=', False)]</field>
+        <field name="points">20</field>
+        <field name="evaluation_mode">once</field>
+    </record>
+
+    <!-- ============================================================
+         EMAIL ENGAGEMENT (Woodpecker) - intent points awarded directly by
+         the tracked-event ingest (crm.tracked.event._award_engagement), not by
+         domain rules. Points: opened +5, clicked +15, replied +50, bounced -20.
+         Stacked with the MQL fit points above, an engaged replier crosses the
+         handoff threshold (75) and the existing automation opens a deal.
+         Shares expiry with the MQL score so cold intent decays out.
+         ============================================================ -->
+    <record id="score_contact_engagement" model="crm.score">
+        <field name="name">Email Engagement (Woodpecker)</field>
+        <field name="subject">res.partner</field>
+        <field name="expiry_days">90</field>
+    </record>
+
+</odoo>
