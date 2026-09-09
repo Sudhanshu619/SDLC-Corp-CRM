@@ -277,4 +277,11 @@ class CrmLead(models.Model):
             vals['stage_id'] = stage.id
         lead = self.create(vals)
         lead._fire_journey_event('deal_created', note="Created from contact score handoff")
+        # Score the new deal inline. Without this it sits at 0 until the next
+        # cron pass, so a freshly handed-off deal ranks *below* stale ones in
+        # the decay-ordered priority queue -- the opposite of the intent.
+        deal_scores = self.env['crm.score'].sudo().search([
+            ('active', '=', True), ('subject', '=', 'crm.lead')])
+        if deal_scores:
+            deal_scores._evaluate(lead)
         return lead
