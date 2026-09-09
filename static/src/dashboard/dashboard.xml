@@ -206,7 +206,7 @@
                     <div class="o_stat">
                         <i class="fa fa-star"/><div><b t-esc="state.k.avgContactScore"/><span>Avg Contact Score</span></div>
                     </div>
-                    <div class="o_stat" t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','lost']], 'Lost Deals')">
+                    <div class="o_stat" t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','lost']], 'Lost Deals', {active_test: false})">
                         <i class="fa fa-times-circle text-danger"/><div><b t-esc="state.k.lostCount"/><span>Lost Deals</span></div>
                     </div>
                 </div>

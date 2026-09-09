@@ -75,6 +75,43 @@
     </record>
 
     <!-- ================================================================
+         Lost Deals: a first-class view of closed-lost opportunities.
+         Marking a deal Lost archives the lead (active=False), so this action
+         disables active_test to surface them, and the list exposes the lost
+         reason and who owned it for post-mortem review.
+         ================================================================ -->
+    <record id="view_lost_deals_list" model="ir.ui.view">
+        <field name="name">sdlc.lost.deals.list</field>
+        <field name="model">crm.lead</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="Lost Deals" create="false" default_order="write_date desc"
+                  decoration-muted="1">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="account_id" optional="show"/>
+                <field name="stage_id"/>
+                <field name="lost_reason_id"/>
+                <field name="expected_revenue" sum="Lost Value"/>
+                <field name="user_id"/>
+                <field name="write_date" string="Lost On" optional="show"/>
+            </list>
+        </field>
+    </record>
+    <record id="action_lost_deals" model="ir.actions.act_window">
+        <field name="name">Lost Deals</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_lost_deals_list"/>
+        <field name="domain">[('type', '=', 'opportunity'), ('ac_deal_status', '=', 'lost')]</field>
+        <field name="context">{'active_test': False, 'create': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No lost deals yet</p>
+            <p>Deals marked Lost show up here with their lost reason for review.</p>
+        </field>
+    </record>
+
+    <!-- ================================================================
          The board: one screen aggregating pipeline, performance, activity
          quality, velocity, scoring and the flow trail.
          ================================================================ -->

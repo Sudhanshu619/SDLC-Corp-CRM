@@ -247,12 +247,16 @@ export class SdlcCrmDashboard extends Component {
     }
 
     // ---- drill-through -----------------------------------------------
-    openDeals(domain, name) {
+    openDeals(domain, name, context = {}) {
+        // Lost deals are archived (active=False); callers pass
+        // {active_test: false} so the drilled-in list actually shows them
+        // instead of an empty (archived-filtered) result.
         this.action.doAction({
             type: "ir.actions.act_window",
             name,
             res_model: "crm.lead",
             domain,
+            context,
             views: [[false, "list"], [false, "form"]],
         });
     }

@@ -92,10 +92,15 @@ class SdlcCrmWoodpecker(http.Controller):
         if not self._check_secret(params):
             return {'status': 'error', 'message': 'invalid or missing token'}
         # Woodpecker nests contact fields under a "prospect" object; accept both
-        # the nested and a flat shape.
-        prospect = params.get('prospect') or params
-        email = prospect.get('email') or params.get('email')
-        event_type = self._map_event(params.get('event') or params.get('event_type'))
+        # the nested and a flat shape (some payloads use "contact").
+        prospect = params.get('prospect') or params.get('contact') or params
+        email = (prospect.get('email') or params.get('email')
+                 or params.get('prospect_email') or params.get('to'))
+        # The event name lands under different keys depending on the Woodpecker
+        # webhook flavour: event / event_type / type / action / status.
+        event_type = self._map_event(
+            params.get('event') or params.get('event_type') or params.get('type')
+            or params.get('action') or params.get('status') or params.get('event_name'))
         if not email:
             return {'status': 'error', 'message': 'prospect email required'}
         if not event_type:
@@ -132,18 +137,44 @@ class SdlcCrmWoodpecker(http.Controller):
                 type='http', auth='public', methods=['POST'], csrf=False)
     def woodpecker_http(self, **kwargs):
         body = request.httprequest.get_data() or b'{}'
-        # Optional: log the raw payload so the first live Woodpecker POST reveals
-        # its exact field shape. Enable with System Parameter
-        # 'sdlc_crm.woodpecker_debug' = 1, disable once the mapping is confirmed.
-        if request.env['ir.config_parameter'].sudo().get_param('sdlc_crm.woodpecker_debug'):
-            _logger.info("Woodpecker webhook raw payload: %s", body[:4000])
+        # Optional: log every raw payload. Enable with System Parameter
+        # 'sdlc_crm.woodpecker_debug' = 1; disable once the mapping is confirmed.
+        debug = request.env['ir.config_parameter'].sudo().get_param('sdlc_crm.woodpecker_debug')
+        if debug:
+            _logger.info("Woodpecker webhook raw payload (%s): %s",
+                         request.httprequest.content_type, body[:4000])
         try:
-            params = json.loads(body.decode('utf-8')) if body.strip() else {}
+            parsed = json.loads(body.decode('utf-8')) if body.strip() else {}
         except (ValueError, UnicodeDecodeError):
-            params = {}
-        if not isinstance(params, dict) or not params:
-            params = kwargs
-        result = self._ingest(params)
+            parsed = {}
+        # Woodpecker can POST a single event object OR a batch (a bare JSON list,
+        # or {"events":[...]} / {"activities":[...]}). Normalise to a list.
+        if isinstance(parsed, dict):
+            batch = parsed.get('events') or parsed.get('activities')
+            items = batch if isinstance(batch, list) else [parsed]
+        elif isinstance(parsed, list):
+            items = parsed
+        else:
+            items = []
+        items = [i for i in items if isinstance(i, dict) and i]
+        if not items:
+            items = [kwargs] if kwargs else []
+        results = [self._ingest(i) for i in items]
+        # Self-diagnosis: if nothing ingested cleanly, log the raw body and the
+        # reasons even when debug is off, so the first real Woodpecker POST that
+        # doesn't match reveals its exact shape in the server log.
+        if not results or any(r.get('status') != 'ok' for r in results):
+            if not debug:
+                _logger.warning(
+                    "Woodpecker webhook not ingested (%s). Reasons: %s. Raw: %s",
+                    request.httprequest.content_type,
+                    [r.get('message') for r in results if r.get('status') != 'ok'] or ['empty body'],
+                    body[:4000])
+        result = results[0] if len(results) == 1 else {
+            'status': 'ok' if results and all(r.get('status') == 'ok' for r in results) else 'partial',
+            'count': len(results),
+            'results': results,
+        }
         return request.make_json_response(result)
 
     # JSON-RPC variant, for internal/Odoo-style callers using the envelope.

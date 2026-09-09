@@ -70,6 +70,12 @@
               action="action_crm_journey_event"
               sequence="30"/>
 
+    <menuitem id="menu_sdlc_lost_deals"
+              name="Lost Deals"
+              parent="menu_sdlc_crm_reporting"
+              action="action_lost_deals"
+              sequence="40"/>
+
     <!-- ================================================================
          5) CONFIGURATION (grafted into native config)
          ================================================================ -->
