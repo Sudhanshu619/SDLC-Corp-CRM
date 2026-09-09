@@ -66,8 +66,12 @@ class CrmScore(models.Model):
             'date_expiry': expiry,
         } for rec in records])
 
-    def _evaluate(self, records=None):
+    def _evaluate(self, records=None, modes=None):
         """Idempotent for 'once' rules, additive for 'every' rules.
+
+        ``modes`` restricts the pass to the given evaluation modes, e.g.
+        ``('once',)`` for an idempotent back-fill or ``('every',)`` for a decay
+        pass. ``None`` evaluates every rule.
 
         Blueprint E3: AC only supports 'once' and forces one automation per
         repeatable rule; our ``evaluation_mode`` removes that limitation.
@@ -84,6 +88,8 @@ class CrmScore(models.Model):
                 'uid': self.env.uid,
             }
             for rule in score.rule_ids.filtered('active'):
+                if modes and rule.evaluation_mode not in modes:
+                    continue
                 try:
                     domain = safe_eval(rule.domain or '[]', eval_ctx)
                 except Exception:
@@ -134,9 +140,25 @@ class CrmScore(models.Model):
     # ------------------------------------------------------------------
     @api.model
     def _cron_evaluate_dynamic(self):
-        """Run 'every'-mode rules (e.g. decay) on their cadence."""
+        """Run 'every'-mode rules (e.g. decay) on their cadence.
+
+        Restricted to 'every' mode: this cron defines the decay *rate*, so it
+        must not also award 'once' rules -- and, more importantly, the hourly
+        back-fill cron must not end up driving decay (see
+        ``_cron_evaluate_static``)."""
         scores = self.search([('active', '=', True)])
-        scores._evaluate()
+        scores._evaluate(modes=('every',))
+
+    @api.model
+    def _cron_evaluate_static(self):
+        """Back-fill 'once'-mode rules, e.g. for newly created contacts.
+
+        'once' rules are idempotent, so this is cheap to run frequently. It
+        deliberately skips 'every' rules: sharing an entry point with
+        ``_cron_evaluate_dynamic`` made the hourly sweep bleed decay points
+        every hour instead of on the decay cron's own 2-day cadence."""
+        scores = self.search([('active', '=', True)])
+        scores._evaluate(modes=('once',))
 
     @api.model
     def _cron_expire_points(self):
