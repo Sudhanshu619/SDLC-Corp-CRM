@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'SDLC Sales CRM (ActiveCampaign-style)',
-    'version': '19.0.2.8.0',
+    'version': '19.0.2.9.0',
     'category': 'Sales/CRM',
     'summary': 'Sales CRM: leads and multi-contact deals, per-deal currency, stage '
                'history and velocity, task outcomes & sentiment, and a '
