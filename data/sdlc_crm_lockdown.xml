@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Access lockdown.
+
+    This CRM is for a named handful of people, not the public. Odoo ships with
+    "Free sign up" available, and a deployment that is left on it lets anyone
+    who can reach /web/signup mint themselves an account AND a contact record.
+    That is how strangers end up in the address book.
+
+    Deliberately NOT noupdate="1": this re-applies on every upgrade, so a later
+    deployment cannot silently come back up with public sign-up enabled.
+
+      b2b = on invitation only (no public sign-up form)   <- what we want
+      b2c = free sign up                                   <- Odoo's open mode
+-->
+<odoo>
+
+    <!-- set_param, not <record>: the row already exists in any live database
+         (Odoo writes it itself) and has no external id, so a <record> would try
+         to INSERT a duplicate and trip ir_config_parameter_key_uniq. set_param
+         updates in place whether or not the row is there. -->
+    <function model="ir.config_parameter" name="set_param">
+        <value>auth_signup.invitation_scope</value>
+        <value>b2b</value>
+    </function>
+
+</odoo>

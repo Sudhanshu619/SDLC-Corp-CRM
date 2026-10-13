@@ -1,271 +1,499 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="sdlc_CRM.Dashboard">
-        <div class="o_sdlc_dashboard">
 
-            <!-- ============ HEADER ============ -->
-            <div class="o_sdlc_header">
-                <div>
-                    <h2 class="o_sdlc_title">CRM Command Center</h2>
-                    <div class="o_sdlc_subtitle">
-                        ActiveCampaign-style pipeline, scoring &amp; activity — live
-                        <span t-if="state.updatedAt" class="o_sdlc_stamp">
-                            · updated <t t-esc="state.updatedAt"/>
-                        </span>
-                    </div>
-                </div>
-                <div class="o_sdlc_actions">
-                    <button class="btn btn-sm"
-                            t-att-class="state.autoRefresh ? 'btn-success' : 'btn-outline-secondary'"
-                            t-on-click="toggleAuto">
-                        <i class="fa fa-clock-o me-1"/>
-                        <t t-esc="state.autoRefresh ? 'Auto: ON' : 'Auto: OFF'"/>
-                    </button>
-                    <button class="btn btn-sm btn-primary" t-on-click="refresh">
-                        <i class="fa fa-refresh me-1"/> Refresh
+<t t-name="sdlc_CRM.Dashboard">
+    <div class="o_sdlc_dash">
+
+        <!-- ============ GREETING ============ -->
+        <div class="o_hello">
+            <div>
+                <h1>Welcome back, <t t-esc="firstName"/>!</h1>
+                <p>
+                    <t t-esc="campaignName"/> · <t t-esc="state.k.periodNote"/> ·
+                    updated <t t-esc="state.updatedAt"/>
+                </p>
+            </div>
+            <div class="o_hello_act">
+                <div class="o_seg" role="group" aria-label="Period">
+                    <button t-foreach="periods" t-as="p" t-key="p.key"
+                            class="o_seg_btn" t-att-class="{'active': state.period === p.key}"
+                            t-att-aria-pressed="state.period === p.key"
+                            t-on-click="() => this.setPeriod(p.key)">
+                        <t t-esc="p.label"/>
                     </button>
                 </div>
-            </div>
-
-            <div t-if="state.loading" class="o_sdlc_loading">
-                <i class="fa fa-spinner fa-spin fa-2x"/>
-                <div class="mt-2">Loading live CRM data…</div>
-            </div>
-
-            <div t-else="" class="o_sdlc_body">
-
-                <!-- ============ HERO KPIs ============ -->
-                <div class="o_sdlc_hero">
-                    <div class="o_hero_card grad-blue"
-                         t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','open']], 'Open Deals')">
-                        <div class="o_hero_icon"><i class="fa fa-line-chart"/></div>
-                        <div class="o_hero_value" t-esc="fmtCompact(state.k.openValue)"/>
-                        <div class="o_hero_label">Open Pipeline</div>
-                        <div class="o_hero_sub"><t t-esc="state.k.openCount"/> deals · avg <t t-esc="fmtCompact(state.k.avgDealValue)"/></div>
-                    </div>
-                    <div class="o_hero_card grad-green"
-                         t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','won']], 'Won Deals')">
-                        <div class="o_hero_icon"><i class="fa fa-trophy"/></div>
-                        <div class="o_hero_value" t-esc="fmtCompact(state.k.wonValue)"/>
-                        <div class="o_hero_label">Won Value</div>
-                        <div class="o_hero_sub"><t t-esc="state.k.wonCount"/> deals closed</div>
-                    </div>
-                    <div class="o_hero_card grad-violet">
-                        <div class="o_hero_icon"><i class="fa fa-percent"/></div>
-                        <div class="o_hero_value"><t t-esc="state.k.winRate"/>%</div>
-                        <div class="o_hero_label">Win Rate</div>
-                        <div class="o_hero_sub"><t t-esc="state.k.wonCount"/> won / <t t-esc="state.k.lostCount"/> lost</div>
-                    </div>
-                    <div class="o_hero_card grad-amber">
-                        <div class="o_hero_icon"><i class="fa fa-bolt"/></div>
-                        <div class="o_hero_value" t-esc="state.k.avgDealScore"/>
-                        <div class="o_hero_label">Avg Deal Score</div>
-                        <div class="o_hero_sub"><t t-esc="state.k.hotCount"/> hot · <t t-esc="state.k.staleCount"/> stalling</div>
-                    </div>
-                    <div class="o_hero_card grad-teal"
-                         t-on-click="() => this.openList('crm.activity.log', 'Task Overview')">
-                        <div class="o_hero_icon"><i class="fa fa-check-circle"/></div>
-                        <div class="o_hero_value" t-esc="fmtCompact(state.k.tasksDone)"/>
-                        <div class="o_hero_label">Tasks Completed</div>
-                        <div class="o_hero_sub">
-                            <span class="text-success"><t t-esc="state.sentiment.positive"/>+</span> ·
-                            <span class="text-danger"><t t-esc="state.sentiment.negative"/>−</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ============ CHARTS ROW 1 ============ -->
-                <div class="o_sdlc_grid">
-
-                    <!-- Pipeline funnel by stage -->
-                    <div class="o_card o_card-wide">
-                        <div class="o_card_head">
-                            <span><i class="fa fa-filter me-2"/>Pipeline by Stage</span>
-                            <span class="o_card_hint">open value</span>
-                        </div>
-                        <div class="o_card_body">
-                            <div t-if="!state.stages.length" class="o_empty">No open deals</div>
-                            <div t-foreach="state.stages" t-as="s" t-key="s.name" class="o_bar_row"
-                                 t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','open'],['stage_id','=',s.name]], s.name)">
-                                <div class="o_bar_label">
-                                    <span t-esc="s.name"/>
-                                    <span class="o_bar_meta"><t t-esc="s.count"/> · <t t-esc="fmtCompact(s.value)"/></span>
-                                </div>
-                                <div class="o_bar_track">
-                                    <div class="o_bar_fill" t-attf-style="width:{{s.pct}}%;background:{{s.color}}"/>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Deal-status donut -->
-                    <div class="o_card">
-                        <div class="o_card_head"><span><i class="fa fa-pie-chart me-2"/>Deal Status</span></div>
-                        <div class="o_card_body o_donut_wrap">
-                            <svg viewBox="0 0 140 140" class="o_donut">
-                                <circle cx="70" cy="70" r="54" class="o_donut_track"/>
-                                <t t-foreach="state.donut" t-as="d" t-key="d.label">
-                                    <circle cx="70" cy="70" r="54"
-                                            fill="none" stroke-width="18"
-                                            t-att-stroke="d.color"
-                                            t-attf-stroke-dasharray="{{d.dash}} {{d.gap}}"
-                                            t-att-stroke-dashoffset="d.offset"
-                                            transform="rotate(-90 70 70)"/>
-                                </t>
-                                <text x="70" y="66" class="o_donut_num" text-anchor="middle"
-                                      t-esc="state.k.openCount + state.k.wonCount + state.k.lostCount"/>
-                                <text x="70" y="84" class="o_donut_cap" text-anchor="middle">deals</text>
-                            </svg>
-                            <div class="o_donut_legend">
-                                <div t-foreach="state.donut" t-as="d" t-key="d.label" class="o_leg_row">
-                                    <span class="o_leg_dot" t-attf-style="background:{{d.color}}"/>
-                                    <span class="o_leg_name" t-esc="d.label"/>
-                                    <span class="o_leg_val"><t t-esc="d.value"/> · <t t-esc="d.pct"/>%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ============ CHARTS ROW 2 ============ -->
-                <div class="o_sdlc_grid">
-
-                    <!-- Score distribution -->
-                    <div class="o_card">
-                        <div class="o_card_head"><span><i class="fa fa-signal me-2"/>Score Distribution</span></div>
-                        <div class="o_card_body o_cols">
-                            <div t-foreach="state.scoreBuckets" t-as="b" t-key="b.label" class="o_col_bar">
-                                <div class="o_col_track">
-                                    <div class="o_col_fill" t-attf-style="height:{{b.pct}}%;background:{{b.color}}"/>
-                                </div>
-                                <div class="o_col_val" t-esc="b.count"/>
-                                <div class="o_col_cap" t-esc="b.label"/>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Task sentiment -->
-                    <div class="o_card">
-                        <div class="o_card_head"><span><i class="fa fa-smile-o me-2"/>Task Sentiment</span></div>
-                        <div class="o_card_body">
-                            <div class="o_seg_bar">
-                                <div class="o_seg pos" t-attf-style="flex:{{state.sentiment.positive or 0}}" t-att-title="'Positive: ' + state.sentiment.positive"/>
-                                <div class="o_seg neu" t-attf-style="flex:{{state.sentiment.neutral or 0}}" t-att-title="'Neutral: ' + state.sentiment.neutral"/>
-                                <div class="o_seg neg" t-attf-style="flex:{{state.sentiment.negative or 0}}" t-att-title="'Negative: ' + state.sentiment.negative"/>
-                            </div>
-                            <div class="o_seg_legend">
-                                <span><span class="o_leg_dot pos"/>Positive <b t-esc="state.sentiment.positive"/></span>
-                                <span><span class="o_leg_dot neu"/>Neutral <b t-esc="state.sentiment.neutral"/></span>
-                                <span><span class="o_leg_dot neg"/>Negative <b t-esc="state.sentiment.negative"/></span>
-                            </div>
-                            <div class="o_mini_stats">
-                                <div class="o_mini" t-on-click="() => this.openList('crm.journey.event', 'Journey Events')">
-                                    <div class="o_mini_val" t-esc="fmtCompact(state.k.events)"/>
-                                    <div class="o_mini_cap">Journey Events</div>
-                                </div>
-                                <div class="o_mini">
-                                    <div class="o_mini_val" t-esc="state.k.dealsCreated"/>
-                                    <div class="o_mini_cap">Deals from Handoff</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Owner leaderboard -->
-                    <div class="o_card">
-                        <div class="o_card_head"><span><i class="fa fa-users me-2"/>Owner Leaderboard</span></div>
-                        <div class="o_card_body">
-                            <div t-if="!state.owners.length" class="o_empty">No open deals</div>
-                            <div t-foreach="state.owners" t-as="o" t-key="o.name" class="o_bar_row">
-                                <div class="o_bar_label">
-                                    <span t-esc="o.name"/>
-                                    <span class="o_bar_meta"><t t-esc="o.count"/> · <t t-esc="fmtCompact(o.value)"/></span>
-                                </div>
-                                <div class="o_bar_track">
-                                    <div class="o_bar_fill" t-attf-style="width:{{o.pct}}%;background:{{o.color}}"/>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ============ SECONDARY STAT STRIP ============ -->
-                <div class="o_sdlc_strip">
-                    <div class="o_stat" t-on-click="() => this.openList('res.partner', 'Contacts', [['is_company','=',false]])">
-                        <i class="fa fa-address-book"/><div><b t-esc="fmtCompact(state.k.contacts)"/><span>Contacts</span></div>
-                    </div>
-                    <div class="o_stat" t-on-click="() => this.openList('res.partner', 'Handed-off Contacts', [['crm_handoff_done','=',true]])">
-                        <i class="fa fa-handshake-o"/><div><b t-esc="state.k.handoff"/><span>Handed Off</span></div>
-                    </div>
-                    <div class="o_stat" t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','open'],['deal_score','&gt;=',90]], 'Hot Deals')">
-                        <i class="fa fa-fire text-warning"/><div><b t-esc="state.k.hotCount"/><span>Hot Deals</span></div>
-                    </div>
-                    <div class="o_stat" t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','open'],['deal_score','&lt;',60]], 'Stalling Deals')">
-                        <i class="fa fa-snowflake-o text-danger"/><div><b t-esc="state.k.staleCount"/><span>Stalling</span></div>
-                    </div>
-                    <div class="o_stat">
-                        <i class="fa fa-star"/><div><b t-esc="state.k.avgContactScore"/><span>Avg Contact Score</span></div>
-                    </div>
-                    <div class="o_stat" t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','lost']], 'Lost Deals', {active_test: false})">
-                        <i class="fa fa-times-circle text-danger"/><div><b t-esc="state.k.lostCount"/><span>Lost Deals</span></div>
-                    </div>
-                </div>
-
-                <!-- ============ BOTTOM ROW ============ -->
-                <div class="o_sdlc_grid">
-
-                    <!-- Top priority deals -->
-                    <div class="o_card o_card-wide">
-                        <div class="o_card_head">
-                            <span><i class="fa fa-trophy me-2"/>Top Priority Deals</span>
-                            <span class="o_card_hint">by decay score</span>
-                        </div>
-                        <div class="o_card_body p-0">
-                            <table class="o_deal_table">
-                                <thead>
-                                    <tr><th>Deal</th><th>Stage</th><th>Owner</th><th class="text-end">Value</th><th class="text-end">Score</th></tr>
-                                </thead>
-                                <tbody>
-                                    <tr t-foreach="state.topDeals" t-as="d" t-key="d.id"
-                                        t-on-click="() => this.openRecord('crm.lead', d.id)">
-                                        <td class="o_deal_name" t-esc="d.name"/>
-                                        <td><span class="o_pill" t-esc="d.stage"/></td>
-                                        <td t-esc="d.owner"/>
-                                        <td class="text-end" t-esc="fmtMoney(d.value)"/>
-                                        <td class="text-end">
-                                            <span class="o_score"
-                                                  t-att-class="d.score >= 90 ? 'hot' : (d.score &lt; 60 ? 'cold' : 'warm')"
-                                                  t-esc="d.score"/>
-                                        </td>
-                                    </tr>
-                                    <tr t-if="!state.topDeals.length"><td colspan="5" class="o_empty">No open deals</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Stage velocity -->
-                    <div class="o_card">
-                        <div class="o_card_head">
-                            <span><i class="fa fa-tachometer me-2"/>Stage Velocity</span>
-                            <span class="o_card_hint">avg hrs</span>
-                        </div>
-                        <div class="o_card_body">
-                            <div t-if="!state.velocity.length" class="o_empty">No stage history yet</div>
-                            <div t-foreach="state.velocity" t-as="v" t-key="v.name" class="o_bar_row">
-                                <div class="o_bar_label">
-                                    <span t-esc="v.name"/>
-                                    <span class="o_bar_meta"><t t-esc="v.hours"/>h</span>
-                                </div>
-                                <div class="o_bar_track">
-                                    <div class="o_bar_fill" t-attf-style="width:{{v.pct}}%;background:#0ea5e9"/>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+                <button class="o_icon_btn" t-on-click="refresh" title="Refresh now">
+                    <i class="fa fa-refresh" t-att-class="{'fa-spin': state.loading}"/>
+                </button>
+                <button class="o_bell" title="Deals with an overdue next step"
+                        t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','open'],['activity_state','=','overdue']], 'Deals with overdue tasks')">
+                    <i class="fa fa-bell-o"/>
+                    <span class="o_bell_n" t-if="state.k.overdueCount" t-esc="state.k.overdueCount"/>
+                </button>
+                <button class="o_btn_ghost" t-on-click="newCampaign">New campaign</button>
+                <button class="o_btn_solid" t-on-click="openBoard">Open the pipeline</button>
+                <button class="o_grad" t-on-click="newDeal"><i class="fa fa-plus me-1"/>New deal</button>
             </div>
         </div>
-    </t>
+
+        <!-- ============ CAMPAIGN FILTER ============ -->
+        <div class="o_chips">
+            <button class="o_chip" t-att-class="{'active': !state.campaignId}"
+                    t-on-click="() => this.setCampaign(null)">All campaigns</button>
+            <button t-foreach="state.campaigns" t-as="c" t-key="c.id"
+                    class="o_chip" t-att-class="{'active': state.campaignId === c.id}"
+                    t-on-click="() => this.setCampaign(c.id)">
+                <span class="o_dot" t-attf-style="background:{{c.color}}"/>
+                <t t-esc="c.name"/><span class="o_chip_n" t-esc="c.count"/>
+            </button>
+        </div>
+
+        <div class="o_note" t-if="!hasValue and (state.k.openCount or state.k.wonCount)">
+            <i class="fa fa-info-circle me-2"/>
+            <span>No deal has an <b>expected revenue</b> yet, so every value reads zero.</span>
+            <button class="o_link ms-auto"
+                    t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','open'],['expected_revenue','=',0]], 'Deals with no value')">
+                Show unpriced deals
+            </button>
+        </div>
+
+        <!-- ============ ROW 1: the four figures ============ -->
+        <div class="o_grid o_grid--kpi">
+
+            <section class="o_card o_kpi" t-on-click="() => this.openStatus('open')">
+                <div class="o_kpi_head">
+                    <span class="o_tile violet"><i class="fa fa-line-chart"/></span>
+                    <span class="o_kpi_cap">Open pipeline</span>
+                    <i class="fa fa-ellipsis-v o_kebab" title="Open the list"/>
+                </div>
+                <div class="o_kpi_row">
+                    <div class="o_kpi_val"><t t-esc="fmtMoney(state.k.openValue)"/></div>
+                </div>
+                <div class="o_kpi_sub"><t t-esc="state.k.openCount"/> live deals</div>
+            </section>
+
+            <section class="o_card o_kpi"
+                     t-on-click="() => this.openSnapshot([['type','=','opportunity'],['ac_deal_status','=','open'],'|','|',['activity_state','=','overdue'],['activity_state','=',false],['is_rotting','=',true]], 'Deals at risk')">
+                <div class="o_kpi_head">
+                    <span class="o_tile red"><i class="fa fa-exclamation-triangle"/></span>
+                    <span class="o_kpi_cap">Deals at risk</span>
+                    <i class="fa fa-ellipsis-v o_kebab" title="Open the list"/>
+                </div>
+                <div class="o_kpi_row">
+                    <div class="o_kpi_val"><t t-esc="state.k.atRiskCount"/></div>
+                    <span class="o_delta down" t-if="state.k.openCount">
+                        <t t-esc="Math.round((state.k.atRiskCount / state.k.openCount) * 100)"/>%
+                        of open
+                    </span>
+                </div>
+                <div class="o_kpi_sub">overdue, idle or stalled</div>
+            </section>
+
+            <section class="o_card o_kpi" t-on-click="() => this.openStatus('won')">
+                <div class="o_kpi_head">
+                    <span class="o_tile green"><i class="fa fa-trophy"/></span>
+                    <span class="o_kpi_cap">Won</span>
+                    <i class="fa fa-ellipsis-v o_kebab" title="Open the list"/>
+                </div>
+                <div class="o_kpi_row">
+                    <div class="o_kpi_val">
+                        <t t-if="state.k.wonValue"><t t-esc="fmtMoney(state.k.wonValue)"/></t>
+                        <t t-else=""><t t-esc="state.k.wonCount"/></t>
+                    </div>
+                    <span t-if="state.k.wonTrend !== null and state.k.wonTrend !== undefined"
+                          class="o_delta" t-att-class="state.k.wonTrend >= 0 ? 'up' : 'down'">
+                        <i class="fa" t-att-class="state.k.wonTrend >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'"/>
+                        <t t-esc="Math.abs(state.k.wonTrend)"/>%
+                    </span>
+                </div>
+                <div class="o_kpi_sub">
+                    <t t-if="state.k.wonValue"><t t-esc="state.k.wonCount"/> deals closed in this period</t>
+                    <t t-else="">deals won · no value recorded</t>
+                </div>
+            </section>
+
+            <section class="o_card o_kpi">
+                <div class="o_kpi_head">
+                    <span class="o_tile amber"><i class="fa fa-percent"/></span>
+                    <span class="o_kpi_cap">Win rate</span>
+                    <i class="fa fa-ellipsis-v o_kebab"/>
+                </div>
+                <div class="o_kpi_row">
+                    <div class="o_kpi_val"><t t-esc="state.k.winRate"/>%</div>
+                </div>
+                <div class="o_kpi_sub">
+                    <t t-esc="state.k.wonCount"/> won · <t t-esc="state.k.lostCount"/> lost
+                </div>
+            </section>
+        </div>
+
+        <!-- ============ ROW 2: trend, status, campaigns ============ -->
+        <div class="o_grid o_grid--b">
+
+            <!-- == the hero chart: three series, one axis, crosshair == -->
+            <section class="o_card">
+                <div class="o_card_head">
+                    <div>
+                        <div class="o_card_title">Deal flow</div>
+                        <small class="o_card_hint">Last 6 months · deals created, won and lost</small>
+                    </div>
+                    <ul class="o_legend">
+                        <li t-foreach="state.trend.series" t-as="sr" t-key="sr.name">
+                            <span class="o_dot" t-attf-style="background:{{sr.color}}"/>
+                            <t t-esc="sr.name"/>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="o_chart" t-on-mousemove="onTrendMove" t-on-mouseleave="onTrendLeave">
+                    <svg viewBox="0 0 600 275" role="img"
+                         aria-label="Deals created, won and lost over the last six months">
+                        <defs>
+                            <linearGradient t-foreach="state.trend.series" t-as="sr" t-key="sr.name"
+                                            t-attf-id="sdlcFade{{sr_index}}" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" t-att-stop-color="sr.color" stop-opacity="0.18"/>
+                                <stop offset="100%" t-att-stop-color="sr.color" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+
+                        <!-- recessive grid -->
+                        <g class="o_axis">
+                            <line t-foreach="state.trend.ticks" t-as="tk" t-key="tk.v"
+                                  x1="30" x2="590" t-att-y1="tk.y" t-att-y2="tk.y"/>
+                            <text t-foreach="state.trend.ticks" t-as="tk" t-key="tk.v"
+                                  x="24" t-att-y="tk.y + 4" text-anchor="end" t-esc="tk.v"/>
+                        </g>
+
+                        <!-- the series -->
+                        <g t-foreach="state.trend.series" t-as="sr" t-key="sr.name">
+                            <path t-att-d="sr.area" t-attf-fill="url(#sdlcFade{{sr_index}})" stroke="none"/>
+                            <path t-att-d="sr.path" fill="none" t-att-stroke="sr.color"
+                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </g>
+
+                        <!-- crosshair + the dots it lands on -->
+                        <g t-if="state.trend.hover">
+                            <line class="o_cross" t-att-x1="state.trend.hover.x" t-att-x2="state.trend.hover.x"
+                                  y1="14" y2="241"/>
+                            <circle t-foreach="state.trend.series" t-as="sr" t-key="sr.name"
+                                    t-att-cx="sr.points[state.trend.hover.i].x"
+                                    t-att-cy="sr.points[state.trend.hover.i].y"
+                                    r="4.5" t-att-fill="sr.color" stroke="#ffffff" stroke-width="2"/>
+                        </g>
+
+                        <text class="o_xlab" t-foreach="state.trend.labels" t-as="lb" t-key="lb.text"
+                              t-att-x="lb.x" y="263" text-anchor="middle" t-esc="lb.text"/>
+                    </svg>
+
+                    <div class="o_tip" t-if="state.trend.hover"
+                         t-attf-style="left:{{state.trend.hover.left}}%">
+                        <div class="o_tip_head" t-esc="state.trend.hover.label"/>
+                        <div class="o_tip_row" t-foreach="state.trend.hover.rows" t-as="r" t-key="r.name">
+                            <span class="o_dot" t-attf-style="background:{{r.color}}"/>
+                            <span t-esc="r.name"/><b t-esc="r.v"/>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- == status donut == -->
+            <section class="o_card">
+                <div class="o_card_title">Deal status</div>
+                <small class="o_card_hint d-block mb-2">Distribution</small>
+
+                <div class="o_donut">
+                    <svg viewBox="0 0 100 100" role="img" aria-label="Deals by status">
+                        <circle cx="50" cy="50" r="40" fill="none" t-att-stroke="track" stroke-width="15"/>
+                        <circle t-foreach="state.donut" t-as="d" t-key="d.label"
+                                cx="50" cy="50" r="40" fill="none" stroke-width="15"
+                                t-att-stroke="d.color" t-att-stroke-dasharray="d.dash"
+                                t-att-stroke-dashoffset="d.offset"
+                                transform="rotate(-90 50 50)">
+                            <title><t t-esc="d.label"/>: <t t-esc="d.value"/> deals</title>
+                        </circle>
+                    </svg>
+                    <div class="o_donut_mid" t-if="topShare">
+                        <span t-esc="topShare.label"/>
+                        <b><t t-esc="topShare.pct"/>%</b>
+                    </div>
+                    <div class="o_donut_mid" t-else="">
+                        <span>No deals</span>
+                    </div>
+                </div>
+
+                <ul class="o_legend o_legend--stack">
+                    <li t-foreach="state.share" t-as="s" t-key="s.label"
+                        t-on-click="() => this.openStatus(s.status)">
+                        <span class="o_dot" t-attf-style="background:{{s.color}}"/>
+                        <span class="o_legend_label" t-esc="s.label"/>
+                        <b t-esc="s.count"/>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- == campaigns, as the reference's inner cards == -->
+            <section class="o_card">
+                <div class="o_card_head">
+                    <div>
+                        <div class="o_card_title">Campaigns</div>
+                        <small class="o_card_hint">Where the open deals sit</small>
+                    </div>
+                    <button class="o_link" t-on-click="openCampaigns">View All</button>
+                </div>
+                <div class="o_inner_list">
+                    <div t-foreach="visibleCampaigns" t-as="c" t-key="c.id" class="o_inner"
+                         t-on-click="() => this.openCampaignBoard(c.id, c.name)">
+                        <div class="o_inner_cap">
+                            <span class="o_dot" t-attf-style="background:{{c.color}}"/>
+                            <t t-esc="c.name"/>
+                        </div>
+                        <div class="o_inner_val">
+                            <t t-if="c.value"><t t-esc="fmtCompact(c.value)"/></t>
+                            <t t-else=""><t t-esc="c.count"/></t>
+                        </div>
+                        <div class="o_prog">
+                            <span class="o_prog_fill" t-attf-style="width:{{c.pct}}%;background:{{c.color}}"/>
+                        </div>
+                        <div class="o_inner_foot">
+                            <span><t t-esc="c.count"/> open</span>
+                            <span t-if="c.count and c.value">
+                                <t t-esc="fmtMoney(c.value / c.count)"/> avg
+                            </span>
+                        </div>
+                    </div>
+                    <div t-if="hiddenCampaignCount" class="o_more">
+                        + <t t-esc="hiddenCampaignCount"/> more campaign(s)
+                    </div>
+                    <div t-if="state.k.noCampaignCount" class="o_inner"
+                         t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','open'],['campaign_id','=',false]], 'Deals with no campaign')">
+                        <div class="o_inner_cap"><span class="o_dot" style="background:#b9b7c6"/>No campaign</div>
+                        <div class="o_inner_val"><t t-esc="state.k.noCampaignCount"/></div>
+                        <div class="o_prog"><span class="o_prog_fill" style="width:8%;background:#b9b7c6"/></div>
+                        <div class="o_inner_foot"><span>needs a home</span></div>
+                    </div>
+                    <div t-if="!state.campaigns.length" class="o_empty">No campaign yet</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ============ ROW 3: stages, deals, attention ============ -->
+        <div class="o_grid o_grid--c">
+
+            <section class="o_card">
+                <div class="o_card_head">
+                    <div>
+                        <div class="o_card_title">Pipeline by stage</div>
+                        <small class="o_card_hint">
+                            <t t-esc="fmtMoney(state.k.openValue)"/> across
+                            <t t-esc="state.k.openCount"/> live deals
+                        </small>
+                    </div>
+                    <div class="o_seg o_seg--sm" role="group" aria-label="Measure">
+                        <button class="o_seg_btn" t-att-class="{'active': measureIsValue}"
+                                t-on-click="() => this.setMeasure('value')">Value</button>
+                        <button class="o_seg_btn" t-att-class="{'active': !measureIsValue}"
+                                t-on-click="() => this.setMeasure('count')">Deals</button>
+                    </div>
+                </div>
+                <div class="o_cols" t-if="state.stages.length">
+                    <div t-foreach="state.stages" t-as="s" t-key="s.name" class="o_col"
+                         t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','open'],['stage_id','=',s.id]], s.name + ' deals')">
+                        <span class="o_col_tip"><t t-esc="colLabel(s)"/></span>
+                        <div class="o_col_track">
+                            <div class="o_col_fill" t-attf-style="height:{{colPct(s)}}%;background:{{s.color}}"
+                                 t-attf-title="{{s.name}}: {{fmtMoney(s.value)}} across {{s.count}} deal(s)"/>
+                        </div>
+                        <div class="o_col_cap" t-esc="s.name"/>
+                        <div class="o_col_sub"><t t-esc="s.count"/> deals</div>
+                    </div>
+                </div>
+                <div t-else="" class="o_empty">No open deals</div>
+            </section>
+
+            <section class="o_card">
+                <div class="o_card_head">
+                    <div class="o_card_title">Biggest open deals</div>
+                    <button class="o_link" t-on-click="openBoard">View All</button>
+                </div>
+                <table class="o_dtable" t-if="state.topDeals.length">
+                    <thead>
+                        <tr><th>Deal</th><th>Stage</th><th>Probability</th><th class="text-end">Value</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="state.topDeals" t-as="d" t-key="d.id"
+                            t-on-click="() => this.openRecord('crm.lead', d.id)">
+                            <td>
+                                <b t-esc="d.name"/>
+                                <small t-esc="d.contact"/>
+                            </td>
+                            <td><span class="o_pill" t-esc="d.stage"/></td>
+                            <td>
+                                <div class="o_prog_row">
+                                    <span class="o_prog">
+                                        <span class="o_prog_fill" t-attf-style="width:{{d.probability}}%"/>
+                                    </span>
+                                    <small><t t-esc="d.probability"/>%</small>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <b t-if="d.value" t-esc="fmtMoney(d.value)"/>
+                                <b t-else="" class="o_unpriced">No value</b>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div t-else="" class="o_empty">No open deals</div>
+            </section>
+
+            <section class="o_card">
+                <div class="o_card_title">Needs attention</div>
+                <small class="o_card_hint d-block mb-2">What is at risk right now</small>
+                <ul class="o_health">
+                    <li t-on-click="() => this.openSnapshot([['type','=','opportunity'],['ac_deal_status','=','open'],['activity_state','=','overdue']], 'Deals with overdue tasks')">
+                        <span class="o_tile sm red"><i class="fa fa-clock-o"/></span>
+                        <span class="o_health_body">
+                            <b>Overdue next step</b>
+                            <small><t t-esc="state.k.overdueCount"/> deal(s) past their task date</small>
+                        </span>
+                    </li>
+                    <li t-on-click="() => this.openSnapshot([['type','=','opportunity'],['ac_deal_status','=','open'],['activity_state','=',false]], 'Deals with no next step')">
+                        <span class="o_tile sm amber"><i class="fa fa-ban"/></span>
+                        <span class="o_health_body">
+                            <b>No next step at all</b>
+                            <small><t t-esc="state.k.noNextStepCount"/> deal(s) with nothing scheduled</small>
+                        </span>
+                    </li>
+                    <li t-on-click="() => this.openSnapshot([['type','=','opportunity'],['ac_deal_status','=','open'],['is_rotting','=',true]], 'Stalled deals')">
+                        <span class="o_tile sm violet"><i class="fa fa-hourglass-half"/></span>
+                        <span class="o_health_body">
+                            <b>Stalled in a stage</b>
+                            <small><t t-esc="state.k.rottingCount"/> deal(s) sitting too long</small>
+                        </span>
+                    </li>
+                    <li t-on-click="() => this.openSnapshot([['type','=','opportunity'],['ac_deal_status','=','open'],['date_deadline','=',false]], 'Deals with no closing date')">
+                        <span class="o_tile sm aqua"><i class="fa fa-calendar-times-o"/></span>
+                        <span class="o_health_body">
+                            <b>No closing date</b>
+                            <small><t t-esc="state.k.noCloseDateCount"/> deal(s) missing a deadline</small>
+                        </span>
+                    </li>
+                </ul>
+                <button class="o_grad w-100 mt-2" t-on-click="newDeal">
+                    <i class="fa fa-plus me-1"/>Add a deal
+                </button>
+            </section>
+        </div>
+
+        <!-- ============ ROW 4: people, speed, losses ============ -->
+        <div class="o_grid o_grid--d">
+            <section class="o_card">
+                <div class="o_card_title">Pipeline by owner</div>
+                <ul class="o_rows">
+                    <li t-foreach="state.owners" t-as="o" t-key="o.name">
+                        <span class="o_row_cap">
+                            <span class="o_dot" t-attf-style="background:{{o.color}}"/><t t-esc="o.name"/>
+                        </span>
+                        <span class="o_row_track">
+                            <span class="o_row_fill" t-attf-style="width:{{o.pct}}%;background:{{o.color}}"
+                                  t-attf-title="{{o.name}}: {{fmtMoney(o.value)}}"/>
+                        </span>
+                        <b class="o_row_val" t-esc="fmtCompact(o.value)"/>
+                    </li>
+                    <li t-if="!state.owners.length" class="o_empty">Nothing assigned</li>
+                </ul>
+            </section>
+
+            <section class="o_card">
+                <div class="o_card_title">Average time in stage</div>
+                <ul class="o_rows">
+                    <li t-foreach="state.velocity" t-as="v" t-key="v.name">
+                        <span class="o_row_cap" t-esc="v.name"/>
+                        <span class="o_row_track">
+                            <span class="o_row_fill" t-attf-style="width:{{v.pct}}%"
+                                  t-attf-title="{{v.name}}: {{v.hours}} hours"/>
+                        </span>
+                        <b class="o_row_val"><t t-esc="v.hours"/>h</b>
+                    </li>
+                    <li t-if="!state.velocity.length" class="o_empty">No completed stage moves yet</li>
+                </ul>
+            </section>
+
+            <section class="o_card">
+                <div class="o_card_head">
+                    <div class="o_card_title">Why we lose</div>
+                    <small class="o_card_hint">this period</small>
+                </div>
+                <ul class="o_rows">
+                    <li t-foreach="state.lostReasons" t-as="r" t-key="r.name">
+                        <span class="o_row_cap" t-esc="r.name"/>
+                        <span class="o_row_track">
+                            <span class="o_row_fill" t-attf-style="width:{{r.pct}}%;background:{{r.color}}"
+                                  t-attf-title="{{r.name}}: {{r.count}} deal(s)"/>
+                        </span>
+                        <b class="o_row_val" t-esc="r.count"/>
+                    </li>
+                    <li t-if="!state.lostReasons.length" class="o_empty">Nothing lost in this period</li>
+                </ul>
+            </section>
+        </div>
+
+        <!-- ============ ROW 5: what just happened, and task outcomes ======= -->
+        <div class="o_grid o_grid--e">
+            <section class="o_card">
+                <div class="o_card_head">
+                    <div class="o_card_title">Recent activity</div>
+                    <button class="o_link" t-on-click="() => this.openList('crm.journey.event', 'Journey events')">
+                        View All
+                    </button>
+                </div>
+                <ul class="o_feed">
+                    <li t-foreach="state.activity" t-as="a" t-key="a.id"
+                        t-on-click="() => a.leadId and this.openRecord('crm.lead', a.leadId)">
+                        <span class="o_tile sm violet"><i class="fa" t-att-class="eventIcon(a.event)"/></span>
+                        <span class="o_feed_body">
+                            <b t-esc="a.deal"/>
+                            <small><t t-esc="a.label"/></small>
+                        </span>
+                        <span class="o_feed_when" t-esc="a.when"/>
+                    </li>
+                    <li t-if="!state.activity.length" class="o_empty">Nothing has happened yet</li>
+                </ul>
+            </section>
+
+            <section class="o_card">
+                <div class="o_card_title">Task outcomes</div>
+                <div t-if="state.sentiment.total">
+                    <div class="o_share">
+                        <div class="o_share_seg" t-attf-style="flex:{{state.sentiment.positive}};background:{{colors.won}}"
+                             t-attf-title="Positive: {{state.sentiment.positive}}"/>
+                        <div class="o_share_seg" t-attf-style="flex:{{state.sentiment.neutral}};background:#b9b7c6"
+                             t-attf-title="Neutral: {{state.sentiment.neutral}}"/>
+                        <div class="o_share_seg" t-attf-style="flex:{{state.sentiment.negative}};background:{{colors.lost}}"
+                             t-attf-title="Negative: {{state.sentiment.negative}}"/>
+                    </div>
+                    <ul class="o_legend o_legend--row">
+                        <li><span class="o_dot" t-attf-style="background:{{colors.won}}"/>
+                            <span class="o_legend_label">Positive</span><b t-esc="state.sentiment.positive"/></li>
+                        <li><span class="o_dot" style="background:#b9b7c6"/>
+                            <span class="o_legend_label">Neutral</span><b t-esc="state.sentiment.neutral"/></li>
+                        <li><span class="o_dot" t-attf-style="background:{{colors.lost}}"/>
+                            <span class="o_legend_label">Negative</span><b t-esc="state.sentiment.negative"/></li>
+                    </ul>
+                </div>
+                <div t-else="" class="o_empty">No task completed yet</div>
+                <div class="o_qstats">
+                    <div class="o_qs" t-on-click="() => this.openDeals([['type','=','opportunity']], 'Deals created')">
+                        <b t-esc="state.k.createdCount"/><span>New deals</span>
+                    </div>
+                    <div class="o_qs"><b><t t-esc="state.k.avgCycleDays"/>d</b><span>Avg cycle</span></div>
+                    <div class="o_qs" t-on-click="() => this.openList('crm.activity.log', 'Task overview')">
+                        <b t-esc="state.k.tasksDone"/><span>Tasks done</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    </div>
+</t>
+
 </templates>

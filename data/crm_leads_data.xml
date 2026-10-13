@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- The Leads layer is OFF.
+
+         Odoo can run a two-step funnel: an unqualified "lead" that is later
+         converted into an opportunity. This team does not work that way - what
+         arrives is a deal, and it starts in the first stage of the pipeline.
+         Turning the layer off means crm.lead.type defaults to 'opportunity'
+         everywhere, the native Leads menu disappears, and the Opportunities
+         table is the single list of work.
+
+         To bring leads back: tick Settings > CRM > Leads, which grants
+         crm.group_use_lead, and re-enable the native menu crm.crm_menu_leads. -->
+
+    <record id="crm.crm_menu_leads" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+</odoo>

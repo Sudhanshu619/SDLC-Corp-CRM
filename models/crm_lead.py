@@ -3,7 +3,7 @@ import logging
 from dateutil.relativedelta import relativedelta
 
 from odoo import api, fields, models, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -55,13 +55,13 @@ class CrmLead(models.Model):
         string='Deal Status', compute='_compute_ac_deal_status',
         store=True, index=True, tracking=True)
 
-    # ------------------------------------------------------------------
-    # Scoring (populated by sdlc_crm scoring engine)
-    # ------------------------------------------------------------------
-    deal_score = fields.Integer(
-        string='Deal Score', readonly=True, index=True,
-        help="Decay-based priority score. High = hot, decaying = stalling "
-             "(blueprint B3).")
+    # Odoo labels this "Sales Team"; here it is the pipeline the deal sits in.
+    team_id = fields.Many2one(string='Pipeline')
+
+    # Deals group under campaigns, so one is picked for you where the answer is
+    # obvious: whatever screen you came from, or the only campaign there is.
+    # The form still asks when the choice is real.
+    campaign_id = fields.Many2one(default=lambda self: self._default_campaign_id())
 
     stage_history_ids = fields.One2many('crm.stage.history', 'lead_id', string='Stage History')
     journey_event_ids = fields.One2many('crm.journey.event', 'lead_id', string='Journey Events')
@@ -114,27 +114,18 @@ class CrmLead(models.Model):
             lead.journey_event_count = len(lead.journey_event_ids)
 
     # ==================================================================
-    # Constraints (blueprint C4 #12: a deal always has a primary contact)
-    # ==================================================================
-    @api.constrains('type', 'partner_id', 'contact_ids')
-    def _check_primary_contact(self):
-        # Only enforce on opportunities (deals). Leads may be partner-less
-        # while still being qualified -- that is Odoo's lead/opportunity gate.
-        for lead in self:
-            if lead.type == 'opportunity' and not lead.partner_id and not lead.contact_ids:
-                raise ValidationError(_(
-                    "A deal must have at least one contact "
-                    "(ActiveCampaign rule: a deal cannot exist without a primary contact)."))
-
-    # ==================================================================
     # Create / Write -- fire the flow events
     # ==================================================================
+    # NB: a deal deliberately has no "must have a contact" constraint. A rep can
+    # open one with just a company name and an email; the Leads layer is where
+    # anonymous prospects live, and conversion fills the contact in.
     @api.model_create_multi
     def create(self, vals_list):
         leads = super().create(vals_list)
         for lead in leads:
             lead._sync_primary_contact()
             if lead.type == 'opportunity':
+                lead._sync_prospect_contact()
                 # AC: creating a deal fires "Enters a pipeline", NOT "stage
                 # changes" for the initial placement (blueprint C4 #14).
                 lead._fire_journey_event('enters_pipeline', to=lead.team_id.display_name)
@@ -149,6 +140,7 @@ class CrmLead(models.Model):
         # Snapshot the fields we emit events for, before the write.
         tracked = {
             l.id: {
+                'type': l.type,
                 'stage': l.stage_id,
                 'user': l.user_id,
                 'revenue': l.expected_revenue,
@@ -156,17 +148,37 @@ class CrmLead(models.Model):
             } for l in self
         }
         res = super().write(vals)
+        if {'contact_name', 'email_from', 'phone', 'partner_name', 'type'} & set(vals):
+            # details filled in later, or a lead just became a deal
+            self._sync_prospect_contact()
+        if 'partner_id' in vals:
+            # AC's invariant has to hold on write too, not just create: a lead
+            # converted into a deal gets its partner_id set here, so without
+            # this the new primary contact would be missing from contact_ids
+            # (and the Deal Contacts tab would come up empty).
+            self._sync_primary_contact()
         for lead in self:
             if lead.type != 'opportunity':
                 continue
             before = tracked.get(lead.id, {})
-            if 'stage_id' in vals and lead.stage_id != before.get('stage'):
+            # A lead converted into a deal *enters the pipeline*; it does not
+            # "change stage" (same rule as create, blueprint C4 #14). Without
+            # this, a converted lead would carry no stage history at all.
+            converted = before.get('type') == 'lead'
+            if converted:
+                lead._fire_journey_event('enters_pipeline', to=lead.team_id.display_name)
+                if lead.stage_id:
+                    self.env['crm.stage.history'].sudo()._log_transition(lead, previous_stage=False)
+            elif 'stage_id' in vals and lead.stage_id != before.get('stage'):
                 previous = before.get('stage')
                 lead._fire_journey_event(
                     'stage_changed',
                     frm=previous.display_name if previous else False,
                     to=lead.stage_id.display_name)
-                self.env['crm.stage.history'].sudo()._log_transition(lead, previous_stage=previous)
+                # Clearing the stage must not open a history row: stage_id is
+                # required there, so _log_transition would raise.
+                if lead.stage_id:
+                    self.env['crm.stage.history'].sudo()._log_transition(lead, previous_stage=previous)
             if 'user_id' in vals and lead.user_id != before.get('user'):
                 prev_user = before.get('user')
                 lead._fire_journey_event(
@@ -214,6 +226,85 @@ class CrmLead(models.Model):
             return False
         return str(val)
 
+    @api.model
+    def _default_campaign_id(self):
+        """The campaign a new deal lands in when nothing says otherwise.
+
+        Creating from a campaign screen already passes default_campaign_id, so
+        this only has to cover the generic board: with exactly one campaign in
+        the database there is no decision to make, and leaving the deal
+        campaign-less just hides it from every campaign view.
+        """
+        from_context = self.env.context.get('default_campaign_id')
+        if from_context:
+            return from_context
+        campaigns = self.env['utm.campaign'].search([], limit=2)
+        return campaigns.id if len(campaigns) == 1 else False
+
+    def _sync_prospect_contact(self):
+        """Store a deal's person in Contacts, flagged external.
+
+        Every deal should leave a real contact behind - that is where call
+        history, emails and future deals hang off. Leads are deliberately
+        exempt: the lead layer exists precisely so an unqualified prospect can
+        sit in the pipeline without a contact record, and converting the lead is
+        what promotes it.
+
+        The contact is created through Odoo's own ``_create_customer()``, so it
+        is built from the deal's details exactly as a native conversion would,
+        and it lands as ``contact_scope = 'external'`` - no login, no access.
+        """
+        for lead in self:
+            if lead.type != 'opportunity' or lead.partner_id:
+                continue
+            if not (lead.contact_name or lead.email_from or lead.partner_name):
+                continue  # nothing to build a contact from yet
+            # Reuse an existing contact before minting one: _create_customer()
+            # has no duplicate check, so without this every deal from the same
+            # person creates another "John Smith".
+            partner = lead._find_matching_partner()
+            if not partner:
+                partner = lead._create_customer()
+            if partner:
+                lead.partner_id = partner.id
+                lead._sync_primary_contact()
+        return True
+
+    def action_create_contact(self):
+        # Kept for the rare deal saved with no name, email or company at all:
+        # _sync_prospect_contact() has nothing to work from in that case, so
+        # this stays reachable. Normally the contact already exists by now.
+        """Turn this prospect's inline details into a real contact.
+
+        Prospects live on the deal itself (contact_name / partner_name /
+        email_from / phone), so working a pipeline creates no ``res.partner``
+        rows at all. This button is the only way one appears, and it is manual:
+        a prospect becomes a contact when *you* say it is worth keeping.
+
+        Reuses Odoo's own ``_create_customer()`` so the partner is built from
+        lead data exactly as the native conversion would.
+        """
+        self.ensure_one()
+        if self.partner_id:
+            raise UserError(_("This deal already has a contact: %s", self.partner_id.display_name))
+        if not (self.contact_name or self.partner_name or self.email_from):
+            raise UserError(_(
+                "Add a prospect name, company name or email first - there is "
+                "nothing to build a contact from."))
+        partner = self._create_customer()
+        self.partner_id = partner.id
+        self._sync_primary_contact()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _("Contact created"),
+                'message': _("%s is now a contact linked to this deal.", partner.display_name),
+                'type': 'success',
+                'next': {'type': 'ir.actions.act_window_close'},
+            },
+        }
+
     def action_view_stage_history(self):
         """Smart-button action: open this deal's journey-event trail."""
         self.ensure_one()
@@ -252,36 +343,3 @@ class CrmLead(models.Model):
             )
         return True
 
-    # ------------------------------------------------------------------
-    # Score->deal handoff target (blueprint B3 / E3).
-    # Called from the res.partner "score crosses threshold" automation.
-    # ------------------------------------------------------------------
-    @api.model
-    def _create_deal_from_contact(self, partner, team=None, stage=None, user=None):
-        """Create an opportunity from a marketing contact that has crossed the
-        contact-score threshold. Titling follows AC's 'Company - Product' habit."""
-        team = team or self.env['crm.team'].search([], limit=1)
-        # No _() here: invoked from a base.automation server-action frame.
-        company_name = partner.commercial_partner_id.name or partner.name
-        title = "%s - Opportunity" % company_name
-        vals = {
-            'name': title,
-            'type': 'opportunity',
-            'partner_id': partner.id,
-            'contact_ids': [(4, partner.id)],
-            'team_id': team.id if team else False,
-            'user_id': (user or team.user_id).id if (user or (team and team.user_id)) else False,
-            'expected_revenue': 0.0,
-        }
-        if stage:
-            vals['stage_id'] = stage.id
-        lead = self.create(vals)
-        lead._fire_journey_event('deal_created', note="Created from contact score handoff")
-        # Score the new deal inline. Without this it sits at 0 until the next
-        # cron pass, so a freshly handed-off deal ranks *below* stale ones in
-        # the decay-ordered priority queue -- the opposite of the intent.
-        deal_scores = self.env['crm.score'].sudo().search([
-            ('active', '=', True), ('subject', '=', 'crm.lead')])
-        if deal_scores:
-            deal_scores._evaluate(lead)
-        return lead

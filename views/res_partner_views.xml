@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Contacts carry an explicit External / Internal split, so the people a
+         deal brought in never get confused with the people working the deals. -->
+    <record id="res_partner_view_form_sdlc" model="ir.ui.view">
+        <field name="name">res.partner.form.sdlc</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-info mb-0" role="status"
+                     invisible="contact_scope != 'external' or has_system_access">
+                    <i class="fa fa-lock me-2"/>
+                    External contact - no access to this system. Granting portal
+                    access is the only thing that would let them sign in.
+                </div>
+            </xpath>
+
+            <xpath expr="//field[@name='function']" position="after">
+                <field name="contact_scope" widget="radio" options="{'horizontal': true}"/>
+                <field name="has_system_access" invisible="1"/>
+            </xpath>
+
+        </field>
+    </record>
+
+    <record id="res_partner_view_search_sdlc" model="ir.ui.view">
+        <field name="name">res.partner.search.sdlc</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='type_company']" position="before">
+                <filter name="scope_external" string="External (prospects &amp; clients)"
+                        domain="[('contact_scope', '=', 'external')]"/>
+                <filter name="scope_internal" string="Internal (our team)"
+                        domain="[('contact_scope', '=', 'internal')]"/>
+                <filter name="has_access" string="Can sign in"
+                        domain="[('user_ids', '!=', False)]"/>
+                <separator/>
+            </xpath>
+            <xpath expr="//group" position="inside">
+                <filter name="group_contact_scope" string="Contact Type"
+                        context="{'group_by': 'contact_scope'}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="res_partner_view_list_sdlc" model="ir.ui.view">
+        <field name="name">res.partner.list.sdlc</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='email']" position="after">
+                <field name="contact_scope" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

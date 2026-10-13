@@ -17,18 +17,15 @@ class CrmJourneyEvent(models.Model):
     _order = 'create_date desc, id desc'
     _rec_name = 'event'
 
+    # Only the events this module actually emits are offered: an automation
+    # filtering on a value nothing fires would silently never run.
     event = fields.Selection([
         ('enters_pipeline', 'Enters a pipeline'),
         ('stage_changed', 'Deal stage changes'),
         ('status_changed', 'Deal status changes'),
         ('owner_changed', 'Deal owner changes'),
         ('value_changed', 'Deal value changes'),
-        ('field_changed', 'Deal field changes'),
         ('task_completed', 'Task is completed'),
-        ('score_changed', 'Score changes'),
-        ('deal_created', 'Deal created (handoff)'),
-        ('event_recorded', 'Behavioural event recorded'),
-        ('account_field_changed', 'Account field changes'),
     ], required=True, index=True)
 
     # Polymorphic subject (deal / contact / account), mirroring AC's reltype/relid.

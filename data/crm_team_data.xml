@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- One sales team runs this CRM, so the "Sales Team" screens are noise:
+         they duplicate Pipelines under a different name and let someone create
+         a team that is really a pipeline. Pipelines (sequence 0) is the single
+         entry point; these are switched off rather than deleted, so ticking
+         `active` in Settings > Technical > Menu Items brings them back. -->
+
+    <record id="crm.sales_team_menu_team_pipeline" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+
+    <record id="crm.crm_team_config" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+
+    <!-- "Sales > My Pipeline" opens the same board as the top-level Pipeline
+         menu, only pre-filtered to the current user - so "Pipeline" meant two
+         things again. The board itself carries a "My deals" filter instead. -->
+    <record id="crm.menu_crm_opportunities" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+
+    <!-- Membership still matters (it is who works the pipeline), so this one
+         stays - renamed away from "Teams Members". -->
+    <record id="crm.crm_team_member_config" model="ir.ui.menu">
+        <field name="name">Pipeline Members</field>
+    </record>
+</odoo>

@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================================================================
+         Pipelines.
+
+         A pipeline is a crm.team. Odoo calls the screen "Teams" and ships it
+         with create="0" / can_open="0", so it can only be looked at: no New
+         button, and a click opens the deals rather than the pipeline record.
+         Here it becomes a proper managed list - add, edit, remove - while a
+         click on the card still opens that pipeline's stage board.
+         ================================================================ -->
+
+    <record id="crm_team_view_kanban_pipelines" model="ir.ui.view">
+        <field name="name">crm.team.kanban.pipelines.sdlc</field>
+        <field name="model">crm.team</field>
+        <field name="inherit_id" ref="sales_team.crm_team_view_kanban_dashboard"/>
+        <field name="arch" type="xml">
+
+            <!-- Let people create a pipeline from the board. -->
+            <xpath expr="//kanban" position="attributes">
+                <attribute name="create">1</attribute>
+            </xpath>
+
+            <!-- The card menu only offered "Configuration"; add explicit Edit
+                 and Delete so the whole lifecycle is reachable from the card. -->
+            <xpath expr="//a[@type='open']" position="replace">
+                <a class="dropdown-item" type="open" role="menuitem">Edit</a>
+                <a class="dropdown-item text-danger" type="delete" role="menuitem"
+                   groups="sales_team.group_sale_manager">Delete</a>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- The form still spoke Odoo's language: "Sales Team", "Team Details",
+         "Team Leader". Relabelled to pipelines, with the team-configuration
+         switches hidden - anything created here is a deal pipeline. -->
+    <record id="crm_team_view_form_pipelines" model="ir.ui.view">
+        <field name="name">crm.team.form.pipelines.sdlc</field>
+        <field name="model">crm.team</field>
+        <field name="inherit_id" ref="sales_team.crm_team_view_form"/>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+
+            <xpath expr="//form" position="attributes">
+                <attribute name="string">Pipeline</attribute>
+            </xpath>
+
+            <xpath expr="//label[@for='name']" position="attributes">
+                <attribute name="string">Pipeline</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='name']" position="attributes">
+                <attribute name="placeholder">e.g. Enterprise Sales</attribute>
+            </xpath>
+
+            <xpath expr="//group[@name='left']" position="attributes">
+                <attribute name="string">Pipeline Details</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='user_id']" position="attributes">
+                <attribute name="string">Pipeline Leader</attribute>
+            </xpath>
+
+            <!-- "Pipeline / Leads" are team-configuration switches. A record
+                 created here is a pipeline by definition (the action defaults
+                 use_opportunities), and unticking it would make the pipeline
+                 vanish from the list it was created in. -->
+            <xpath expr="//div[@name='options_active']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <xpath expr="//page[@name='members_users']" position="attributes">
+                <attribute name="string">Who works this pipeline</attribute>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- A list view, for renaming or removing several pipelines at once. -->
+    <record id="crm_team_view_list_pipelines" model="ir.ui.view">
+        <field name="name">crm.team.list.pipelines.sdlc</field>
+        <field name="model">crm.team</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="Pipelines" multi_edit="1">
+                <field name="sequence" widget="handle"/>
+                <field name="name" string="Pipeline"/>
+                <field name="user_id" string="Pipeline Leader" widget="many2one_avatar_user"/>
+                <field name="member_ids" widget="many2many_avatar_user" string="Members"
+                       optional="show"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_sdlc_pipelines" model="ir.actions.act_window">
+        <field name="name">Pipelines</field>
+        <field name="res_model">crm.team</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('use_opportunities', '=', True)]</field>
+        <!-- A pipeline created here is a deal pipeline by definition. -->
+        <field name="context">{'default_use_opportunities': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a pipeline
+            </p><p>
+                Each pipeline has its own stages and its own deals. Click a
+                pipeline to open its stage board; use the card menu to rename or
+                remove it. A stage added from inside a pipeline belongs to that
+                pipeline, so every pipeline can run its own cycle.
+            </p>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         The board. "Pipeline" means this screen: every deal, in its stage.
+         ================================================================ -->
+    <record id="action_sdlc_pipeline_board" model="ir.actions.act_window">
+        <field name="name">Pipeline</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">kanban,list,form,pivot,graph,activity</field>
+        <field name="domain">[('type', '=', 'opportunity')]</field>
+        <!-- The whole pipeline, not just mine: a one-person team that only ever
+             sees its own deals cannot tell the board is working. "My deals" is
+             a filter in the search panel for when it is wanted.
+
+             show_user_team_stages makes Odoo render the stages of the user's
+             own pipeline even when a column is empty - without it the board
+             only shows columns that already hold a deal, and there is nowhere
+             to drag a card forward. -->
+        <field name="context">{'default_type': 'opportunity', 'show_user_team_stages': 1}</field>
+        <field name="search_view_id" ref="crm.view_crm_case_opportunities_filter"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add a deal</p>
+            <p>
+                Deals move left to right through the stages. Use a campaign to
+                group the deals belonging to the same push - a region, an event,
+                a quarter.
+            </p>
+        </field>
+    </record>
+
+    <!-- ================================================================
+         Campaigns: the thing a deal belongs to.
+         ================================================================ -->
+    <record id="crm_campaign_view_list_sdlc" model="ir.ui.view">
+        <field name="name">utm.campaign.list.sdlc</field>
+        <field name="model">utm.campaign</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="Campaigns">
+                <field name="name" string="Campaign"/>
+                <field name="user_id" string="Responsible" widget="many2one_avatar_user" optional="show"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_sdlc_campaigns" model="ir.actions.act_window">
+        <field name="name">Campaigns</field>
+        <field name="res_model">utm.campaign</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="crm_campaign_view_list_sdlc"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a campaign</p>
+            <p>
+                A campaign groups the deals belonging to the same effort - for
+                example "USA Offices", "Trade show" or "Q1 outreach". Deals stay
+                on the one pipeline; the campaign is what they belong to.
+            </p>
+        </field>
+    </record>
+
+    <!-- ================================================================
+         The deal list: the figures a rep closes on, and Won / Lost without
+         opening the record. Both buttons are native actions.
+         ================================================================ -->
+    <record id="crm_lead_view_list_board_sdlc" model="ir.ui.view">
+        <field name="name">crm.lead.list.board.sdlc</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_tree_view_oppor"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <header>
+                    <button name="action_set_won_rainbowman" type="object" string="Mark Won"
+                            class="btn-primary"/>
+                    <button name="%(crm.crm_lead_lost_action)d" type="action" string="Mark Lost"/>
+                </header>
+            </xpath>
+            <xpath expr="//field[@name='expected_revenue']" position="after">
+                <field name="prorated_revenue" optional="show" sum="Weighted"/>
+                <field name="campaign_id" string="Campaign" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- A lead is converted into a deal from the list, not only from the form. -->
+    <record id="crm_lead_view_list_leads_sdlc" model="ir.ui.view">
+        <field name="name">crm.lead.list.leads.sdlc</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_tree_view_leads"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list/header" position="inside">
+                <button name="%(crm.action_crm_lead2opportunity_partner)d" type="action"
+                        string="Convert to Deal" class="btn-primary"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- A lost deal with no reason lands in a blank bucket in the Lost Deals
+         report, which is where lost-reason analysis goes to die. -->
+    <record id="crm_lead_lost_view_form_sdlc" model="ir.ui.view">
+        <field name="name">crm.lead.lost.form.sdlc</field>
+        <field name="model">crm.lead.lost</field>
+        <field name="inherit_id" ref="crm.crm_lead_lost_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='lost_reason_id']" position="attributes">
+                <attribute name="required">1</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ================================================================
+         Opportunities: the working table. Same deals as the Pipeline board,
+         read as rows - rep, contact, account, stage, value - for scanning and
+         editing in bulk rather than dragging cards.
+         ================================================================ -->
+    <record id="crm_lead_view_list_opportunities" model="ir.ui.view">
+        <field name="name">crm.lead.list.opportunities.sdlc</field>
+        <field name="model">crm.lead</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <list string="Opportunities" multi_edit="1" sample="1"
+                  default_order="expected_revenue desc">
+                <header>
+                    <button name="action_set_won_rainbowman" type="object" string="Mark Won"
+                            class="btn-primary"/>
+                    <button name="%(crm.crm_lead_lost_action)d" type="action" string="Mark Lost"/>
+                </header>
+                <field name="priority" widget="priority" nolabel="1" optional="show"/>
+                <field name="name" string="Deal"/>
+                <field name="user_id" string="Rep" widget="many2one_avatar_user"/>
+                <field name="partner_id" string="Contact"/>
+                <field name="account_id" string="Account" optional="show"/>
+                <field name="campaign_id" string="Campaign" optional="show"/>
+                <!-- Stage as a pill. Colour tracks how far along the deal is -
+                     the label is always there, so colour is never the only
+                     thing carrying the meaning. -->
+                <field name="stage_id" string="Stage" widget="badge"
+                       decoration-success="probability &gt;= 100"
+                       decoration-warning="probability &gt;= 50 and probability &lt; 100"
+                       decoration-info="probability &lt; 50"/>
+                <field name="expected_revenue" string="Deal value" sum="Pipeline"/>
+                <field name="prorated_revenue" string="Weighted" sum="Weighted" optional="hide"/>
+                <field name="date_deadline" string="Expected closing" optional="show"/>
+                <field name="activity_ids" widget="list_activity" string="Next step" optional="show"/>
+                <field name="probability" widget="percentage" optional="hide"/>
+                <field name="ac_deal_status" string="Status" optional="hide"/>
+                <field name="company_currency" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_sdlc_opportunities" model="ir.actions.act_window">
+        <field name="name">Opportunities</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">list,kanban,form,pivot,graph,activity</field>
+        <field name="domain">[('type', '=', 'opportunity')]</field>
+        <field name="context">{'default_type': 'opportunity', 'show_user_team_stages': 1}</field>
+        <field name="search_view_id" ref="crm.view_crm_case_opportunities_filter"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add an opportunity</p>
+            <p>
+                Every deal in one table: who owns it, who it is with, which
+                account and campaign it belongs to, what stage it is in and what
+                it is worth. The Pipeline menu shows the same deals as a board.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_sdlc_opportunities_view_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="crm_lead_view_list_opportunities"/>
+        <field name="act_window_id" ref="action_sdlc_opportunities"/>
+    </record>
+
+    <!-- ================================================================
+         Campaign form: its own stages, or the shared default set.
+         ================================================================ -->
+    <record id="utm_campaign_view_form_sdlc" model="ir.ui.view">
+        <field name="name">utm.campaign.form.sdlc</field>
+        <field name="model">utm.campaign</field>
+        <field name="inherit_id" ref="utm.utm_campaign_view_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button class="oe_stat_button" type="object" icon="fa-briefcase"
+                        name="action_view_deals">
+                    <field name="deal_count" widget="statinfo" string="Deals"/>
+                </button>
+            </xpath>
+
+
+        </field>
+    </record>
+
+
+
+    <!-- ================================================================
+         The three slices of the deal list people ask for by name. All three
+         reuse the Opportunities table; only the filter differs.
+         ================================================================ -->
+    <!-- ================================================================
+         No fake records on an empty board.
+
+         Odoo renders greyed-out placeholder cards (REF0001, REF0002, ...) with
+         invented names and values behind the "No data to display" message when
+         a kanban or list has no records. On a CRM that is actively confusing:
+         it reads as real data that someone cannot account for. An empty
+         pipeline should simply look empty.
+         ================================================================ -->
+    <record id="crm_lead_kanban_no_sample_sdlc" model="ir.ui.view">
+        <field name="name">crm.lead.kanban.no.sample.sdlc</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
+        <field name="arch" type="xml">
+            <xpath expr="//kanban" position="attributes">
+                <attribute name="sample">0</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="crm_lead_list_no_sample_sdlc" model="ir.ui.view">
+        <field name="name">crm.lead.list.no.sample.sdlc</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_tree_view_oppor"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="sample">0</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_sdlc_my_deals" model="ir.actions.act_window">
+        <field name="name">My Deals</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">list,kanban,form,activity</field>
+        <field name="domain">[('type', '=', 'opportunity')]</field>
+        <field name="context">{'default_type': 'opportunity', 'search_default_assigned_to_me': 1,
+                               'show_user_team_stages': 1}</field>
+        <field name="search_view_id" ref="crm.view_crm_case_opportunities_filter"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing assigned to you yet</p>
+            <p>Deals where you are the salesperson.</p>
+        </field>
+    </record>
+
+    <record id="action_sdlc_my_deals_view_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="crm_lead_view_list_opportunities"/>
+        <field name="act_window_id" ref="action_sdlc_my_deals"/>
+    </record>
+
+    <record id="action_sdlc_won_deals" model="ir.actions.act_window">
+        <field name="name">Won</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">list,kanban,form,pivot,graph</field>
+        <field name="domain">[('type', '=', 'opportunity'), ('ac_deal_status', '=', 'won')]</field>
+        <field name="context">{'default_type': 'opportunity'}</field>
+        <field name="search_view_id" ref="crm.view_crm_case_opportunities_filter"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No deal won yet</p>
+            <p>Closed-won deals, newest first. The value here is what actually landed.</p>
+        </field>
+    </record>
+
+    <record id="action_sdlc_won_deals_view_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="crm_lead_view_list_opportunities"/>
+        <field name="act_window_id" ref="action_sdlc_won_deals"/>
+    </record>
+
+
+    <!-- Quick-creating a card on the board skipped the campaign entirely, so
+         deals made that way fell outside every campaign view. -->
+    <record id="quick_create_opportunity_form_sdlc" model="ir.ui.view">
+        <field name="name">crm.lead.quick.create.sdlc</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.quick_create_opportunity_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="campaign_id" string="Campaign"
+                       options="{'create_name_field': 'title'}"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

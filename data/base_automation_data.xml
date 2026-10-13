@@ -29,32 +29,7 @@
     </record>
 
     <!-- ============================================================
-         FLOW 2 - Marketing/sales handoff (blueprint B3).
-         When a contact's score crosses the threshold and it has not yet been
-         handed off, create a deal and mark it handed off (idempotent).
-         ============================================================ -->
-    <record id="automation_score_handoff" model="base.automation">
-        <field name="name">Contact score >= 75 -> create deal (handoff)</field>
-        <field name="model_id" ref="base.model_res_partner"/>
-        <field name="trigger">on_create_or_write</field>
-        <field name="filter_domain">[('contact_score', '>=', 75), ('crm_handoff_done', '=', False), ('is_company', '=', False)]</field>
-    </record>
-    <record id="action_score_handoff" model="ir.actions.server">
-        <field name="name">Create deal from contact score</field>
-        <field name="base_automation_id" ref="automation_score_handoff"/>
-        <field name="model_id" ref="base.model_res_partner"/>
-        <field name="state">code</field>
-        <field name="code">
-for partner in records:
-    # Mark handed off FIRST so any partner writes triggered by deal creation
-    # (opportunity counts, etc.) no longer match the filter -> no duplicate deals.
-    partner.write({'crm_handoff_done': True})
-    env['crm.lead']._create_deal_from_contact(partner)
-        </field>
-    </record>
-
-    <!-- ============================================================
-         FLOW 3 - Won fan-out (blueprint B8/B9).
+         FLOW 2 - Won fan-out (blueprint B8/B9).
          When a deal is Won, tag every contact on the deal as Customer and
          post an audit note. A one-to-many fan-out from a deal fact to
          person-level state.
@@ -64,7 +39,7 @@ for partner in records:
         <field name="model_id" ref="crm.model_crm_lead"/>
         <field name="trigger">on_create_or_write</field>
         <field name="filter_pre_domain">[('ac_deal_status', '!=', 'won')]</field>
-        <field name="filter_domain">[('ac_deal_status', '=', 'won')]</field>
+        <field name="filter_domain">[('ac_deal_status', '=', 'won'), ('type', '=', 'opportunity')]</field>
     </record>
     <record id="action_won_fanout" model="ir.actions.server">
         <field name="name">Tag deal contacts as Customer</field>

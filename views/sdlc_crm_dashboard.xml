@@ -49,25 +49,26 @@
         <field name="domain">[('type', '=', 'opportunity')]</field>
     </record>
 
-    <!-- 3) Top priority deals by decay score (list) -->
+    <!-- 3) Biggest open deals (list). Ranked by expected revenue, with the
+         native star priority and probability as the urgency signals. -->
     <record id="dash_lead_list_score" model="ir.ui.view">
-        <field name="name">sdlc.dash.lead.list.score</field>
+        <field name="name">sdlc.dash.lead.list.top</field>
         <field name="model">crm.lead</field>
         <field name="priority">100</field>
         <field name="arch" type="xml">
-            <list string="Top Priority Deals" default_order="deal_score desc" create="false">
+            <list string="Biggest Open Deals" default_order="expected_revenue desc" create="false">
+                <field name="priority" widget="priority" nolabel="1"/>
                 <field name="name"/>
                 <field name="stage_id"/>
-                <field name="deal_score" widget="badge"
-                       decoration-success="deal_score &gt;= 90"
-                       decoration-warning="deal_score &lt; 60"/>
-                <field name="expected_revenue" optional="show"/>
+                <field name="expected_revenue" sum="Pipeline"/>
+                <field name="probability" widget="percentage" optional="show"/>
+                <field name="activity_state" widget="activity_state" optional="show"/>
                 <field name="user_id"/>
             </list>
         </field>
     </record>
     <record id="action_dash_top_deals" model="ir.actions.act_window">
-        <field name="name">Top Priority Deals</field>
+        <field name="name">Biggest Open Deals</field>
         <field name="res_model">crm.lead</field>
         <field name="view_mode">list</field>
         <field name="view_id" ref="dash_lead_list_score"/>
@@ -111,49 +112,6 @@
         </field>
     </record>
 
-    <!-- ================================================================
-         The board: one screen aggregating pipeline, performance, activity
-         quality, velocity, scoring and the flow trail.
-         ================================================================ -->
-    <record id="board_sdlc_crm_dashboard" model="ir.ui.view">
-        <field name="name">AC CRM Command Center</field>
-        <field name="model">board.board</field>
-        <field name="type">form</field>
-        <field name="arch" type="xml">
-            <form string="AC CRM Command Center">
-                <board style="1-1">
-                    <column>
-                        <action name="%(action_dash_pipeline_stage)d"
-                                string="Pipeline Value by Stage" view_mode="graph" height="260"/>
-                        <action name="%(action_crm_activity_log)d"
-                                string="Task Overview (by Sentiment)" view_mode="graph" height="260"/>
-                        <action name="%(action_crm_journey_event)d"
-                                string="Recent Journey Events" view_mode="list" height="300"/>
-                    </column>
-                    <column>
-                        <action name="%(action_dash_deals_owner)d"
-                                string="Deals by Owner &amp; Status" view_mode="pivot" height="260"/>
-                        <action name="%(action_crm_stage_history)d"
-                                string="Stage Velocity (avg hours in stage)" view_mode="pivot" height="260"/>
-                        <action name="%(action_dash_top_deals)d"
-                                string="Top Priority Deals (decay score)" view_mode="list" height="300"/>
-                    </column>
-                </board>
-            </form>
-        </field>
-    </record>
-
-    <!-- Charts board (secondary view, reachable from AC Reports).
-         Keeps its original external id (it already exists as an act_window). -->
-    <record id="action_sdlc_crm_dashboard" model="ir.actions.act_window">
-        <field name="name">CRM Charts</field>
-        <field name="res_model">board.board</field>
-        <field name="view_mode">form</field>
-        <field name="usage">menu</field>
-        <field name="view_id" ref="board_sdlc_crm_dashboard"/>
-    </record>
-
-    <!-- Primary KPI dashboard: an OWL client action with live numbers. -->
     <record id="action_sdlc_crm_dashboard_kpi" model="ir.actions.client">
         <field name="name">CRM Dashboard</field>
         <field name="tag">sdlc_crm_dashboard</field>

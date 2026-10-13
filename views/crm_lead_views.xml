@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Deal form: multi-contact, per-deal currency, AC status, score,
-         and smart buttons to stage history / journey events. -->
+    <!-- Deal form: multi-contact, per-deal currency, deal status, the
+         prospect block (details with no contact record) and smart buttons to
+         stage history / journey events. -->
     <record id="crm_lead_view_form_sdlc" model="ir.ui.view">
         <field name="name">crm.lead.form.sdlc</field>
         <field name="model">crm.lead</field>
@@ -22,10 +23,41 @@
                 <field name="expected_revenue_company" groups="base.group_multi_currency"/>
             </xpath>
 
-            <xpath expr="//field[@name='partner_id']" position="after">
+            <xpath expr="(//field[@name='partner_id'])[last()]" position="after">
                 <field name="account_id" options="{'no_create': True}"/>
+                <!-- What this deal belongs to: a region, an event, a quarter.
+                     Native field, normally buried under the marketing tab. -->
+                <!-- NOT required. It was, and that bricked the form: a deal
+                     created without a campaign (the kanban quick-create does
+                     not ask for one, and a fresh database has no campaigns at
+                     all) could never be saved again - Odoo keeps Save disabled
+                     while a required field is empty, so the record could not
+                     even be given the campaign it was missing. A default
+                     campaign ships instead, see data/crm_campaign_data.xml. -->
+                <field name="campaign_id" string="Campaign"
+                       options="{'create_name_field': 'title'}"
+                       placeholder="Group this deal with a region, event or quarter"/>
                 <field name="ac_deal_status" readonly="1"/>
-                <field name="deal_score"/>
+                <!-- Forecast groups on this date and weights by probability;
+                     a deal without it falls into the "None" bucket and is
+                     invisible to every forecast. -->
+                <field name="date_deadline" string="Expected closing"/>
+            </xpath>
+
+            <!-- Prospect block. A card in the pipeline can carry the person's
+                 name, company and job title with NO res.partner behind it;
+                 email and phone are already on the native form. The button is
+                 the only path from prospect to contact, and it is manual. -->
+            <xpath expr="//group[@name='opportunity_partner']/field[@name='partner_id']" position="before">
+                <field name="contact_name" string="Prospect"
+                       placeholder="e.g. Dana Fisher" invisible="partner_id"/>
+                <field name="partner_name" string="Company"
+                       placeholder="e.g. ACME Industries" invisible="partner_id"/>
+                <field name="function" string="Job Position" invisible="partner_id"/>
+                <button name="action_create_contact" type="object"
+                        string="Create a contact from these details"
+                        class="btn-link ps-0" icon="fa-user-plus"
+                        invisible="partner_id or (not contact_name and not partner_name and not email_from)"/>
             </xpath>
 
             <xpath expr="//notebook" position="inside">
@@ -36,7 +68,6 @@
                             <field name="email"/>
                             <field name="phone"/>
                             <field name="function"/>
-                            <field name="contact_score"/>
                         </list>
                     </field>
                     <field name="contact_count" invisible="1"/>
@@ -67,18 +98,6 @@
                 </page>
             </xpath>
 
-        </field>
-    </record>
-
-    <!-- Show the deal score on the pipeline kanban card as a priority signal. -->
-    <record id="crm_case_kanban_view_leads_sdlc" model="ir.ui.view">
-        <field name="name">crm.lead.kanban.sdlc</field>
-        <field name="model">crm.lead</field>
-        <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
-        <field name="arch" type="xml">
-            <xpath expr="//field[@name='probability']" position="after">
-                <field name="deal_score"/>
-            </xpath>
         </field>
     </record>
 

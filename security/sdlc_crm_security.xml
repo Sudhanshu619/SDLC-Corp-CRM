@@ -104,4 +104,34 @@
         <field name="groups" eval="[(4, ref('group_sdlc_crm_all'))]"/>
     </record>
 
+    <!-- Stage history and the completed-task log carry a read ACL; without a
+         record rule that ACL alone exposes every rep's rows, since a model with
+         no rule is fully visible to anyone holding the ACL. Group rules are
+         OR-ed, so each "all" rule widens the matching own-only rule. -->
+    <record id="rule_stage_history_own" model="ir.rule">
+        <field name="name">SDLC: stage history of own deals</field>
+        <field name="model_id" ref="model_crm_stage_history"/>
+        <field name="domain_force">['|', ('lead_id.user_id', '=', user.id), ('lead_id.user_id', '=', False)]</field>
+        <field name="groups" eval="[(4, ref('group_sdlc_crm_user'))]"/>
+    </record>
+    <record id="rule_stage_history_all" model="ir.rule">
+        <field name="name">SDLC: stage history all</field>
+        <field name="model_id" ref="model_crm_stage_history"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_sdlc_crm_all'))]"/>
+    </record>
+
+    <record id="rule_activity_log_own" model="ir.rule">
+        <field name="name">SDLC: task log of own work</field>
+        <field name="model_id" ref="model_crm_activity_log"/>
+        <field name="domain_force">['|', ('user_id', '=', user.id), ('lead_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_sdlc_crm_user'))]"/>
+    </record>
+    <record id="rule_activity_log_all" model="ir.rule">
+        <field name="name">SDLC: task log all</field>
+        <field name="model_id" ref="model_crm_activity_log"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_sdlc_crm_all'))]"/>
+    </record>
+
 </odoo>

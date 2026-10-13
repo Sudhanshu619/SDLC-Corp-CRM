@@ -30,9 +30,142 @@
     </function>
 
     <!-- A demo behavioural event, so scoring/tracking has something to show. -->
-    <record id="demo_event_pricing" model="crm.tracked.event">
-        <field name="name">pricing_viewed</field>
-        <field name="event_type">page_visit</field>
-        <field name="url">https://example.com/pricing</field>
+    <!-- ================================================================
+         A live, forward-dated pipeline.
+
+         Odoo's stock CRM demo schedules every one of the admin's
+         opportunity activities in the past, so the kanban's activity
+         progressbar only ever paints "overdue" red - the "planned" green
+         band has nothing to count. These deals carry a future expected
+         closing date and a future stage task, so the green band has
+         something to show out of the box.
+
+         The tasks are declared explicitly below rather than left to
+         `automation_stage_task`: base.automation patches the ORM when the
+         registry is built, so a rule loaded from this module's own `data/`
+         section is not live yet during the same update's demo pass. The
+         stage->task loop still fires normally for deals moved in the UI.
+         ================================================================ -->
+
+    <record id="demo_deal_azure_workstations" model="crm.lead">
+        <field name="name">Azure Interior: Q4 Workstation Refresh</field>
+        <field name="type">opportunity</field>
+        <field name="partner_id" ref="base.res_partner_address_1"/>
+        <field name="contact_ids" eval="[Command.set([ref('base.res_partner_address_1'), ref('base.res_partner_address_2')])]"/>
+        <field name="user_id" ref="base.user_admin"/>
+        <field name="team_id" ref="sales_team.team_sales_department"/>
+        <field name="stage_id" ref="crm.stage_lead1"/>
+        <field name="expected_revenue">32000</field>
+        <field name="probability">25</field>
+        <field name="priority">2</field>
+        <field name="date_deadline" eval="(datetime.now() + relativedelta(days=21)).strftime('%Y-%m-%d')"/>
     </record>
+
+    <record id="demo_deal_lumber_racking" model="crm.lead">
+        <field name="name">Lumber Inc: Warehouse Racking</field>
+        <field name="type">opportunity</field>
+        <field name="partner_id" ref="base.res_partner_address_3"/>
+        <field name="contact_ids" eval="[Command.set([ref('base.res_partner_address_3')])]"/>
+        <field name="user_id" ref="base.user_admin"/>
+        <field name="team_id" ref="sales_team.team_sales_department"/>
+        <field name="stage_id" ref="crm.stage_lead1"/>
+        <field name="expected_revenue">18500</field>
+        <field name="probability">20</field>
+        <field name="priority">1</field>
+        <field name="date_deadline" eval="(datetime.now() + relativedelta(days=30)).strftime('%Y-%m-%d')"/>
+    </record>
+
+    <record id="demo_deal_gemini_showroom" model="crm.lead">
+        <field name="name">Gemini Furniture: Showroom Refit</field>
+        <field name="type">opportunity</field>
+        <field name="partner_id" ref="base.res_partner_address_4"/>
+        <field name="contact_ids" eval="[Command.set([ref('base.res_partner_address_4'), ref('base.res_partner_address_5')])]"/>
+        <field name="user_id" ref="base.user_admin"/>
+        <field name="team_id" ref="sales_team.team_sales_department"/>
+        <field name="stage_id" ref="crm.stage_lead2"/>
+        <field name="expected_revenue">64000</field>
+        <field name="probability">45</field>
+        <field name="priority">3</field>
+        <field name="date_deadline" eval="(datetime.now() + relativedelta(days=35)).strftime('%Y-%m-%d')"/>
+    </record>
+
+    <record id="demo_deal_jackson_desks" model="crm.lead">
+        <field name="name">The Jackson Group: Hybrid Desk Rollout</field>
+        <field name="type">opportunity</field>
+        <field name="partner_id" ref="base.res_partner_address_5"/>
+        <field name="contact_ids" eval="[Command.set([ref('base.res_partner_address_5')])]"/>
+        <field name="user_id" ref="base.user_admin"/>
+        <field name="team_id" ref="sales_team.team_sales_department"/>
+        <field name="stage_id" ref="crm.stage_lead2"/>
+        <field name="expected_revenue">27750</field>
+        <field name="probability">40</field>
+        <field name="priority">2</field>
+        <field name="date_deadline" eval="(datetime.now() + relativedelta(days=44)).strftime('%Y-%m-%d')"/>
+    </record>
+
+    <record id="demo_deal_openwood_suite" model="crm.lead">
+        <field name="name">OpenWood: Executive Suite</field>
+        <field name="type">opportunity</field>
+        <field name="partner_id" ref="base.res_partner_address_7"/>
+        <field name="contact_ids" eval="[Command.set([ref('base.res_partner_address_7'), ref('base.res_partner_address_1')])]"/>
+        <field name="user_id" ref="base.user_admin"/>
+        <field name="team_id" ref="sales_team.team_sales_department"/>
+        <field name="stage_id" ref="crm.stage_lead3"/>
+        <field name="expected_revenue">88000</field>
+        <field name="probability">65</field>
+        <field name="priority">3</field>
+        <field name="date_deadline" eval="(datetime.now() + relativedelta(days=52)).strftime('%Y-%m-%d')"/>
+    </record>
+
+
+    <!-- The stage tasks for the deals above, all due in the next fortnight so
+         the kanban activity progressbar has a populated "planned" (green)
+         band. Deadlines are staggered relative to load time, so the demo
+         never goes stale the way a hard-coded date would. -->
+
+    <record id="demo_act_azure_workstations" model="mail.activity">
+        <field name="res_model_id" ref="crm.model_crm_lead"/>
+        <field name="res_id" eval="ref('demo_deal_azure_workstations')"/>
+        <field name="activity_type_id" ref="mail.mail_activity_data_call"/>
+        <field name="summary">Qualify: first call</field>
+        <field name="user_id" ref="base.user_admin"/>
+        <field name="date_deadline" eval="(datetime.now() + relativedelta(days=2)).strftime('%Y-%m-%d')"/>
+    </record>
+
+    <record id="demo_act_lumber_racking" model="mail.activity">
+        <field name="res_model_id" ref="crm.model_crm_lead"/>
+        <field name="res_id" eval="ref('demo_deal_lumber_racking')"/>
+        <field name="activity_type_id" ref="mail.mail_activity_data_call"/>
+        <field name="summary">Qualify: first call</field>
+        <field name="user_id" ref="base.user_admin"/>
+        <field name="date_deadline" eval="(datetime.now() + relativedelta(days=4)).strftime('%Y-%m-%d')"/>
+    </record>
+
+    <record id="demo_act_gemini_showroom" model="mail.activity">
+        <field name="res_model_id" ref="crm.model_crm_lead"/>
+        <field name="res_id" eval="ref('demo_deal_gemini_showroom')"/>
+        <field name="activity_type_id" ref="mail.mail_activity_data_meeting"/>
+        <field name="summary">Discovery meeting</field>
+        <field name="user_id" ref="base.user_admin"/>
+        <field name="date_deadline" eval="(datetime.now() + relativedelta(days=6)).strftime('%Y-%m-%d')"/>
+    </record>
+
+    <record id="demo_act_jackson_desks" model="mail.activity">
+        <field name="res_model_id" ref="crm.model_crm_lead"/>
+        <field name="res_id" eval="ref('demo_deal_jackson_desks')"/>
+        <field name="activity_type_id" ref="mail.mail_activity_data_meeting"/>
+        <field name="summary">Discovery meeting</field>
+        <field name="user_id" ref="base.user_admin"/>
+        <field name="date_deadline" eval="(datetime.now() + relativedelta(days=9)).strftime('%Y-%m-%d')"/>
+    </record>
+
+    <record id="demo_act_openwood_suite" model="mail.activity">
+        <field name="res_model_id" ref="crm.model_crm_lead"/>
+        <field name="res_id" eval="ref('demo_deal_openwood_suite')"/>
+        <field name="activity_type_id" ref="mail.mail_activity_data_email"/>
+        <field name="summary">Send proposal</field>
+        <field name="user_id" ref="base.user_admin"/>
+        <field name="date_deadline" eval="(datetime.now() + relativedelta(days=13)).strftime('%Y-%m-%d')"/>
+    </record>
+
 </odoo>

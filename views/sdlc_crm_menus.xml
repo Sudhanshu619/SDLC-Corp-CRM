@@ -1,88 +1,173 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Reporting + config menus grafted under the native CRM menu, so the
-         AC-style features live alongside the pipeline users already know.
+    <!-- The CRM menu, in the order the work happens.
 
-         Top-level order under the CRM app:
-             0  Dashboards   (this module)
-             1  Sales        (native crm_menu_sales: pipeline / deals)
-             5  Leads        (native)
-            20  Reporting    (native)
-            55  Scoring      (this module)
-            60  AC Reports   (this module)
-            25  Configuration(native) -->
+             0  Dashboard      where the day starts
+             1  Deals          everything about deals, in one section
+                   Pipeline        the board: deals moving through stages
+                   Opportunities   the same deals as a table
+                   My Deals        the ones assigned to me
+                   Won             what landed
+                   Lost            what did not, and why
+             2  Campaigns      what a deal belongs to
+             3  Activities     what I owe someone today
+             4  Contacts       who we deal with
+            20  Reporting      native reports + this module's, in ONE menu
+            90  Configuration  last, as configuration should be
+
+         One word, one meaning. A deal is the record; the Pipeline is the board
+         it moves on; a Campaign is what it belongs to; the crm.team container
+         that owns a stage set is configuration.
+
+         Menus hidden rather than deleted (tick `active` in Settings >
+         Technical > Menu Items to bring any back):
+           crm.crm_menu_sales                     emptied by the promotions below
+           crm.crm_menu_leads                     the lead layer is retired
+           crm.menu_crm_opportunities             "My Pipeline": a second Pipeline
+           crm.crm_opportunity_report_menu_lead   Leads Analysis, no leads left
+           crm_iap_mine.crm_menu_lead_generation  lead mining, no leads
+    -->
 
     <!-- ================================================================
-         1) DASHBOARDS  (first)
+         1) DASHBOARD
          ================================================================ -->
     <menuitem id="menu_sdlc_crm_dashboard"
-              name="Dashboards"
+              name="Dashboard"
               parent="crm.crm_menu_root"
               action="action_sdlc_crm_dashboard_kpi"
               sequence="0"/>
 
-    <!-- Sales stays native (crm.crm_menu_sales): My Pipeline / My Activities /
-         Teams / Customers, ordered right after Dashboards. -->
+    <!-- ================================================================
+         2) DEALS - the work itself. Every view of a deal lives here, so
+         nobody has to know whether the board or the table is "the" screen.
+         ================================================================ -->
+    <menuitem id="menu_sdlc_deals"
+              name="Deals"
+              parent="crm.crm_menu_root"
+              sequence="1"/>
+
+    <menuitem id="menu_sdlc_pipeline_board"
+              name="Pipeline"
+              parent="menu_sdlc_deals"
+              action="action_sdlc_pipeline_board"
+              sequence="1"/>
+
+    <menuitem id="menu_sdlc_opportunities"
+              name="Opportunities"
+              parent="menu_sdlc_deals"
+              action="action_sdlc_opportunities"
+              sequence="2"/>
+
+    <menuitem id="menu_sdlc_my_deals"
+              name="My Deals"
+              parent="menu_sdlc_deals"
+              action="action_sdlc_my_deals"
+              sequence="3"/>
+
+    <menuitem id="menu_sdlc_won_deals"
+              name="Won"
+              parent="menu_sdlc_deals"
+              action="action_sdlc_won_deals"
+              sequence="4"/>
+
+    <!-- Lost sits with the other deal slices, not in Reporting: it is a list
+         of deals, and the reason lives on each one. -->
+    <menuitem id="menu_sdlc_lost_deals"
+              name="Lost"
+              parent="menu_sdlc_deals"
+              action="action_lost_deals"
+              sequence="5"/>
 
     <!-- ================================================================
-         2) SCORING (intelligence)
+         3) CAMPAIGNS - a region, an event, a quarter.
          ================================================================ -->
-    <menuitem id="menu_sdlc_crm_intelligence"
-              name="Scoring"
+    <menuitem id="menu_sdlc_campaigns"
+              name="Campaigns"
               parent="crm.crm_menu_root"
-              sequence="55"/>
-
-    <menuitem id="menu_sdlc_scores"
-              name="Score Models"
-              parent="menu_sdlc_crm_intelligence"
-              action="action_crm_score"
-              sequence="10"/>
-
-    <menuitem id="menu_sdlc_tracked_events"
-              name="Behavioural Events"
-              parent="menu_sdlc_crm_intelligence"
-              action="action_crm_tracked_event"
-              sequence="20"/>
+              action="action_sdlc_campaigns"
+              sequence="2"/>
 
     <!-- ================================================================
-         4) AC REPORTS
+         4) The two screens worth keeping out of the old "Sales" container.
          ================================================================ -->
-    <menuitem id="menu_sdlc_crm_reporting"
-              name="AC Reports"
-              parent="crm.crm_menu_root"
-              sequence="60"/>
+    <record id="crm.crm_lead_menu_my_activities" model="ir.ui.menu">
+        <field name="name">Activities</field>
+        <field name="parent_id" ref="crm.crm_menu_root"/>
+        <field name="sequence">3</field>
+    </record>
+
+    <record id="crm.res_partner_menu_customer" model="ir.ui.menu">
+        <field name="name">Contacts</field>
+        <field name="parent_id" ref="crm.crm_menu_root"/>
+        <field name="sequence">4</field>
+    </record>
+
+    <record id="crm.crm_menu_sales" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+
+    <!-- ================================================================
+         5) REPORTING - one menu, the analysis of all that.
+         ================================================================ -->
+    <record id="crm.crm_menu_report" model="ir.ui.menu">
+        <field name="sequence">20</field>
+    </record>
+
+    <record id="crm.crm_opportunity_report_menu" model="ir.ui.menu">
+        <field name="name">Pipeline Analysis</field>
+    </record>
+
+    <record id="crm.crm_opportunity_report_menu_lead" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
 
     <menuitem id="menu_sdlc_task_overview"
               name="Task Overview"
-              parent="menu_sdlc_crm_reporting"
+              parent="crm.crm_menu_report"
               action="action_crm_activity_log"
               sequence="10"/>
 
     <menuitem id="menu_sdlc_stage_velocity"
               name="Stage Velocity"
-              parent="menu_sdlc_crm_reporting"
+              parent="crm.crm_menu_report"
               action="action_crm_stage_history"
               sequence="20"/>
 
     <menuitem id="menu_sdlc_journey_events"
               name="Journey Events"
-              parent="menu_sdlc_crm_reporting"
+              parent="crm.crm_menu_report"
               action="action_crm_journey_event"
               sequence="30"/>
 
-    <menuitem id="menu_sdlc_lost_deals"
-              name="Lost Deals"
-              parent="menu_sdlc_crm_reporting"
-              action="action_lost_deals"
-              sequence="40"/>
-
     <!-- ================================================================
-         5) CONFIGURATION (grafted into native config)
+         6) CONFIGURATION - last, and a container rather than a screen.
          ================================================================ -->
+    <record id="crm.crm_menu_config" model="ir.ui.menu">
+        <field name="sequence">90</field>
+        <field name="action" eval="False"/>
+    </record>
+
+    <record id="crm.menu_crm_config_lead" model="ir.ui.menu">
+        <field name="name">Pipeline Setup</field>
+    </record>
+
+    <!-- "Lead Generation" belongs to crm_iap_mine, which this module does not
+         depend on. A <record> pointing at an xmlid that does not exist makes
+         Odoo CREATE it - a nameless menu, which fails the NOT NULL constraint
+         and aborts a fresh install. Hidden in code instead, only if present. -->
+    <function model="ir.ui.menu" name="_sdlc_hide_optional_menus"/>
+
+    <menuitem id="menu_sdlc_pipelines"
+              name="Sales Processes"
+              parent="crm.crm_menu_config"
+              action="action_sdlc_pipelines"
+              sequence="45"
+              groups="sdlc_CRM.group_sdlc_crm_manager"/>
+
     <menuitem id="menu_sdlc_task_outcomes"
               name="Task Outcomes"
               parent="crm.crm_menu_config"
               action="action_crm_activity_outcome"
               sequence="50"
-              groups="sales_team.group_sale_manager"/>
+              groups="sdlc_CRM.group_sdlc_crm_manager"/>
 </odoo>
