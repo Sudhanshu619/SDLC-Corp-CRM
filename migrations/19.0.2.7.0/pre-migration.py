@@ -15,7 +15,13 @@ import logging
 _logger = logging.getLogger(__name__)
 
 OBSOLETE_VIEWS = [
-    'crm_stage_form_campaigns_sdlc',   # added "Campaigns" to the stage form
+    'crm_stage_form_campaigns_sdlc',    # added "Campaigns" to the stage form
+    # Added deal_score to the opportunity kanban. The field went with the
+    # scoring layer, but any database installed before that still holds this
+    # view, and it is applied on top of crm.crm_case_kanban_view_leads while
+    # the module's own XML is being validated:
+    #     Field "deal_score" does not exist in model "crm.lead"
+    'crm_case_kanban_view_leads_sdlc',
 ]
 
 
