@@ -9,7 +9,7 @@
             <div>
                 <h1>Welcome back, <t t-esc="firstName"/>!</h1>
                 <p>
-                    <t t-esc="campaignName"/> · <t t-esc="state.k.periodNote"/> ·
+                    <t t-esc="pipelineName"/> · <t t-esc="state.k.periodNote"/> ·
                     updated <t t-esc="state.updatedAt"/>
                 </p>
             </div>
@@ -30,7 +30,7 @@
                     <i class="fa fa-bell-o"/>
                     <span class="o_bell_n" t-if="state.k.overdueCount" t-esc="state.k.overdueCount"/>
                 </button>
-                <button class="o_btn_ghost" t-on-click="newCampaign">New campaign</button>
+                <button class="o_btn_ghost" t-on-click="newPipeline">New pipeline</button>
                 <button class="o_btn_solid" t-on-click="openBoard">Open the pipeline</button>
                 <button class="o_grad" t-on-click="newDeal"><i class="fa fa-plus me-1"/>New deal</button>
             </div>
@@ -38,11 +38,11 @@
 
         <!-- ============ CAMPAIGN FILTER ============ -->
         <div class="o_chips">
-            <button class="o_chip" t-att-class="{'active': !state.campaignId}"
-                    t-on-click="() => this.setCampaign(null)">All campaigns</button>
-            <button t-foreach="state.campaigns" t-as="c" t-key="c.id"
-                    class="o_chip" t-att-class="{'active': state.campaignId === c.id}"
-                    t-on-click="() => this.setCampaign(c.id)">
+            <button class="o_chip" t-att-class="{'active': !state.pipelineId}"
+                    t-on-click="() => this.setPipeline(null)">All pipelines</button>
+            <button t-foreach="state.pipelines" t-as="c" t-key="c.id"
+                    class="o_chip" t-att-class="{'active': state.pipelineId === c.id}"
+                    t-on-click="() => this.setPipeline(c.id)">
                 <span class="o_dot" t-attf-style="background:{{c.color}}"/>
                 <t t-esc="c.name"/><span class="o_chip_n" t-esc="c.count"/>
             </button>
@@ -127,7 +127,7 @@
             </section>
         </div>
 
-        <!-- ============ ROW 2: trend, status, campaigns ============ -->
+        <!-- ============ ROW 2: trend, status, pipelines ============ -->
         <div class="o_grid o_grid--b">
 
             <!-- == the hero chart: three series, one axis, crosshair == -->
@@ -231,18 +231,18 @@
                 </ul>
             </section>
 
-            <!-- == campaigns, as the reference's inner cards == -->
+            <!-- == pipelines, as the reference's inner cards == -->
             <section class="o_card">
                 <div class="o_card_head">
                     <div>
-                        <div class="o_card_title">Campaigns</div>
+                        <div class="o_card_title">Pipelines</div>
                         <small class="o_card_hint">Where the open deals sit</small>
                     </div>
-                    <button class="o_link" t-on-click="openCampaigns">View All</button>
+                    <button class="o_link" t-on-click="openPipelineList">View All</button>
                 </div>
                 <div class="o_inner_list">
-                    <div t-foreach="visibleCampaigns" t-as="c" t-key="c.id" class="o_inner"
-                         t-on-click="() => this.openCampaignBoard(c.id, c.name)">
+                    <div t-foreach="visiblePipelines" t-as="c" t-key="c.id" class="o_inner"
+                         t-on-click="() => this.openPipelineBoard(c.id, c.name)">
                         <div class="o_inner_cap">
                             <span class="o_dot" t-attf-style="background:{{c.color}}"/>
                             <t t-esc="c.name"/>
@@ -261,17 +261,17 @@
                             </span>
                         </div>
                     </div>
-                    <div t-if="hiddenCampaignCount" class="o_more">
-                        + <t t-esc="hiddenCampaignCount"/> more campaign(s)
+                    <div t-if="hiddenPipelineCount" class="o_more">
+                        + <t t-esc="hiddenPipelineCount"/> more pipeline(s)
                     </div>
-                    <div t-if="state.k.noCampaignCount" class="o_inner"
-                         t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','open'],['campaign_id','=',false]], 'Deals with no campaign')">
-                        <div class="o_inner_cap"><span class="o_dot" style="background:#b9b7c6"/>No campaign</div>
-                        <div class="o_inner_val"><t t-esc="state.k.noCampaignCount"/></div>
+                    <div t-if="state.k.noPipelineCount" class="o_inner"
+                         t-on-click="() => this.openDeals([['type','=','opportunity'],['ac_deal_status','=','open'],['team_id','=',false]], 'Deals with no pipeline')">
+                        <div class="o_inner_cap"><span class="o_dot" style="background:#b9b7c6"/>No pipeline</div>
+                        <div class="o_inner_val"><t t-esc="state.k.noPipelineCount"/></div>
                         <div class="o_prog"><span class="o_prog_fill" style="width:8%;background:#b9b7c6"/></div>
                         <div class="o_inner_foot"><span>needs a home</span></div>
                     </div>
-                    <div t-if="!state.campaigns.length" class="o_empty">No campaign yet</div>
+                    <div t-if="!state.pipelines.length" class="o_empty">No pipeline yet</div>
                 </div>
             </section>
         </div>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'SDLC Sales CRM (ActiveCampaign-style)',
-    'version': '19.0.2.9.0',
+    'version': '19.0.2.10.0',
     'category': 'Sales/CRM',
     'summary': 'Sales CRM: leads and multi-contact deals, per-deal currency, stage '
                'history and velocity, task outcomes & sentiment, and a '
@@ -47,7 +47,6 @@ integration.
         'data/crm_activity_type_data.xml',
         'data/crm_activity_outcome_data.xml',
         'data/crm_team_data.xml',
-        'data/crm_campaign_data.xml',
         'data/crm_leads_data.xml',
         'data/base_automation_data.xml',
         'data/sdlc_crm_admin.xml',

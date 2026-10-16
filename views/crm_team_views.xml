@@ -96,6 +96,17 @@
         </field>
     </record>
 
+    <!-- Straight to a blank deal form. A form action with no record opens a
+         new one, which is what "New Deal" means. default_type keeps it an
+         opportunity - the leads layer is off in this CRM. -->
+    <record id="action_sdlc_new_deal" model="ir.actions.act_window">
+        <field name="name">New Deal</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+        <field name="context">{'default_type': 'opportunity'}</field>
+    </record>
+
     <record id="action_sdlc_pipelines" model="ir.actions.act_window">
         <field name="name">Pipelines</field>
         <field name="res_model">crm.team</field>
@@ -137,40 +148,9 @@
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Add a deal</p>
             <p>
-                Deals move left to right through the stages. Use a campaign to
-                group the deals belonging to the same push - a region, an event,
-                a quarter.
-            </p>
-        </field>
-    </record>
-
-    <!-- ================================================================
-         Campaigns: the thing a deal belongs to.
-         ================================================================ -->
-    <record id="crm_campaign_view_list_sdlc" model="ir.ui.view">
-        <field name="name">utm.campaign.list.sdlc</field>
-        <field name="model">utm.campaign</field>
-        <field name="priority">100</field>
-        <field name="arch" type="xml">
-            <list string="Campaigns">
-                <field name="name" string="Campaign"/>
-                <field name="user_id" string="Responsible" widget="many2one_avatar_user" optional="show"/>
-                <field name="active" column_invisible="True"/>
-            </list>
-        </field>
-    </record>
-
-    <record id="action_sdlc_campaigns" model="ir.actions.act_window">
-        <field name="name">Campaigns</field>
-        <field name="res_model">utm.campaign</field>
-        <field name="view_mode">list,form</field>
-        <field name="view_id" ref="crm_campaign_view_list_sdlc"/>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Create a campaign</p>
-            <p>
-                A campaign groups the deals belonging to the same effort - for
-                example "USA Offices", "Trade show" or "Q1 outreach". Deals stay
-                on the one pipeline; the campaign is what they belong to.
+                Deals move left to right through the stages. Each pipeline
+                runs its own stages - see "My Pipelines" for one board per
+                pipeline.
             </p>
         </field>
     </record>
@@ -193,7 +173,7 @@
             </xpath>
             <xpath expr="//field[@name='expected_revenue']" position="after">
                 <field name="prorated_revenue" optional="show" sum="Weighted"/>
-                <field name="campaign_id" string="Campaign" optional="show"/>
+                <field name="team_id" string="Pipeline" optional="show"/>
             </xpath>
         </field>
     </record>
@@ -246,7 +226,7 @@
                 <field name="user_id" string="Rep" widget="many2one_avatar_user"/>
                 <field name="partner_id" string="Contact"/>
                 <field name="account_id" string="Account" optional="show"/>
-                <field name="campaign_id" string="Campaign" optional="show"/>
+                <field name="team_id" string="Pipeline" optional="show"/>
                 <!-- Stage as a pill. Colour tracks how far along the deal is -
                      the label is always there, so colour is never the only
                      thing carrying the meaning. -->
@@ -276,7 +256,7 @@
             <p class="o_view_nocontent_smiling_face">Add an opportunity</p>
             <p>
                 Every deal in one table: who owns it, who it is with, which
-                account and campaign it belongs to, what stage it is in and what
+                account and pipeline it belongs to, what stage it is in and what
                 it is worth. The Pipeline menu shows the same deals as a board.
             </p>
         </field>
@@ -288,28 +268,6 @@
         <field name="view_id" ref="crm_lead_view_list_opportunities"/>
         <field name="act_window_id" ref="action_sdlc_opportunities"/>
     </record>
-
-    <!-- ================================================================
-         Campaign form: its own stages, or the shared default set.
-         ================================================================ -->
-    <record id="utm_campaign_view_form_sdlc" model="ir.ui.view">
-        <field name="name">utm.campaign.form.sdlc</field>
-        <field name="model">utm.campaign</field>
-        <field name="inherit_id" ref="utm.utm_campaign_view_form"/>
-        <field name="arch" type="xml">
-
-            <xpath expr="//div[@name='button_box']" position="inside">
-                <button class="oe_stat_button" type="object" icon="fa-briefcase"
-                        name="action_view_deals">
-                    <field name="deal_count" widget="statinfo" string="Deals"/>
-                </button>
-            </xpath>
-
-
-        </field>
-    </record>
-
-
 
     <!-- ================================================================
          The three slices of the deal list people ask for by name. All three
@@ -388,16 +346,16 @@
     </record>
 
 
-    <!-- Quick-creating a card on the board skipped the campaign entirely, so
-         deals made that way fell outside every campaign view. -->
+    <!-- Quick-creating a card on the board should say which pipeline it
+         belongs to; opened from a pipeline's own board it is pre-filled. -->
     <record id="quick_create_opportunity_form_sdlc" model="ir.ui.view">
         <field name="name">crm.lead.quick.create.sdlc</field>
         <field name="model">crm.lead</field>
         <field name="inherit_id" ref="crm.quick_create_opportunity_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="after">
-                <field name="campaign_id" string="Campaign"
-                       options="{'create_name_field': 'title'}"/>
+                <field name="team_id" string="Pipeline"
+                       options="{'no_create_edit': True}"/>
             </xpath>
         </field>
     </record>

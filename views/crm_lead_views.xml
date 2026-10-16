@@ -27,16 +27,10 @@
                 <field name="account_id" options="{'no_create': True}"/>
                 <!-- What this deal belongs to: a region, an event, a quarter.
                      Native field, normally buried under the marketing tab. -->
-                <!-- NOT required. It was, and that bricked the form: a deal
-                     created without a campaign (the kanban quick-create does
-                     not ask for one, and a fresh database has no campaigns at
-                     all) could never be saved again - Odoo keeps Save disabled
-                     while a required field is empty, so the record could not
-                     even be given the campaign it was missing. A default
-                     campaign ships instead, see data/crm_campaign_data.xml. -->
-                <field name="campaign_id" string="Campaign"
-                       options="{'create_name_field': 'title'}"
-                       placeholder="Group this deal with a region, event or quarter"/>
+                <!-- What this deal belongs to. One pipeline per line of
+                     business, each with its own stages - see "My Pipelines". -->
+                <field name="team_id" string="Pipeline"
+                       options="{'no_create_edit': True}"/>
                 <field name="ac_deal_status" readonly="1"/>
                 <!-- Forecast groups on this date and weights by probability;
                      a deal without it falls into the "None" bucket and is

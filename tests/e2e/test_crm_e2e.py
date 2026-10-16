@@ -160,10 +160,10 @@ def test_menu_structure(page):
     open_action(page, DASH, wait=5000)
     tabs = [t.inner_text().strip() for t in page.query_selector_all(".o_main_navbar .o_menu_sections a, .o_main_navbar .dropdown-toggle")]
     tabs = [t for t in tabs if t]
-    for expected in ("Dashboard", "Deals", "Campaigns", "Contacts", "Reporting", "Configuration"):
+    for expected in ("Dashboard", "Deals", "My Pipelines", "Contacts", "Reporting", "Configuration"):
         R.check("top menu has '%s'" % expected, any(expected == t for t in tabs),
                 "saw %s" % tabs[:10])
-    R.check("'By Campaign' menu is gone", not any("By Campaign" in t for t in tabs))
+    R.check("the Campaigns menu is gone", not any("Campaign" in t for t in tabs))
 
 
 def test_empty_board_has_no_placeholders(page):

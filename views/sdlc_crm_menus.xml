@@ -46,10 +46,15 @@
               parent="crm.crm_menu_root"
               sequence="1"/>
 
-    <menuitem id="menu_sdlc_pipeline_board"
-              name="Pipeline"
+    <!-- No "Pipeline" entry here: it opened the same deals as Opportunities,
+         only as a kanban, and My Pipelines now gives a board per pipeline.
+         The action itself stays - the dashboard's "Open the pipeline" button
+         still uses it. -->
+
+    <menuitem id="menu_sdlc_new_deal"
+              name="New Deal"
               parent="menu_sdlc_deals"
-              action="action_sdlc_pipeline_board"
+              action="action_sdlc_new_deal"
               sequence="1"/>
 
     <menuitem id="menu_sdlc_opportunities"
@@ -79,13 +84,23 @@
               sequence="5"/>
 
     <!-- ================================================================
-         3) CAMPAIGNS - a region, an event, a quarter.
+         3) MY PIPELINES - a container. One child menu per pipeline, built in
+            code as pipelines are created (crm.team._sync_pipeline_menus),
+            because a menu per record cannot be declared in static XML.
+            Each child opens that pipeline's board, scoped to its own stages.
          ================================================================ -->
-    <menuitem id="menu_sdlc_campaigns"
-              name="Campaigns"
+    <menuitem id="menu_sdlc_my_pipelines"
+              name="My Pipelines"
               parent="crm.crm_menu_root"
-              action="action_sdlc_campaigns"
               sequence="2"/>
+
+    <!-- Always first in the dropdown; the per-pipeline entries built in code
+         sit below it (they are given sequence 10 and up). -->
+    <menuitem id="menu_sdlc_all_pipelines"
+              name="All Pipelines"
+              parent="menu_sdlc_my_pipelines"
+              action="action_sdlc_pipelines"
+              sequence="1"/>
 
     <!-- ================================================================
          4) The two screens worth keeping out of the old "Sales" container.

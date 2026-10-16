@@ -39,9 +39,9 @@ const RAMP = ["#b3a3f2", "#9076e9", "#7357dd", "#5a46cc"];
 const TRACK = "#eeecfa";
 
 // Categorical slots, in the exact order the validator passed them. Used only
-// where a colour means an IDENTITY - a campaign, a person - never for a
+// where a colour means an IDENTITY - a pipeline, a person - never for a
 // quantity or an ordered step. Assigned by position and never cycled, so a
-// campaign keeps its colour when the list is filtered.
+// pipeline keeps its colour when the list is filtered.
 const CAT = [ACCENT, "#eb6834", "#1baf7a", "#eda100",
              "#2a78d6", "#e34948", "#008300", "#e87ba4"];
 const catColor = (i) => CAT[i % CAT.length];
@@ -75,8 +75,8 @@ export class SdlcCrmDashboard extends Component {
             loading: true,
             autoRefresh: true,
             period: "30",
-            campaignId: null,       // null = every campaign
-            campaigns: [],
+            pipelineId: null,       // null = every pipeline
+            pipelines: [],
             // Deals often carry no expected revenue, and a money-only dashboard
             // reads as broken when they don't. Measure is switchable, and falls
             // back to deal count on its own while nothing has a value.
@@ -131,13 +131,13 @@ export class SdlcCrmDashboard extends Component {
         const days = this.periodDays;
         return days ? [["date_closed", ">=", this._since(days)]] : [];
     }
-    /** Domain fragment for the selected campaign; empty when showing all. */
-    _campaign() {
-        return this.state.campaignId ? [["campaign_id", "=", this.state.campaignId]] : [];
+    /** Domain fragment for the selected pipeline; empty when showing all. */
+    _pipeline() {
+        return this.state.pipelineId ? [["team_id", "=", this.state.pipelineId]] : [];
     }
-    get campaignName() {
-        const c = this.state.campaigns.find((x) => x.id === this.state.campaignId);
-        return c ? c.name : "All campaigns";
+    get pipelineName() {
+        const c = this.state.pipelines.find((x) => x.id === this.state.pipelineId);
+        return c ? c.name : "All pipelines";
     }
     setMeasure(measure) {
         this.state.measure = measure;
@@ -251,13 +251,13 @@ export class SdlcCrmDashboard extends Component {
         this.state.trend.hover = null;
     }
 
-    /** The card shows the top few; the chips above it list every campaign,
+    /** The card shows the top few; the chips above it list every pipeline,
      *  so nothing is hidden - this only keeps the row a sane height. */
-    get visibleCampaigns() {
-        return this.state.campaigns.slice(0, 3);
+    get visiblePipelines() {
+        return this.state.pipelines.slice(0, 3);
     }
-    get hiddenCampaignCount() {
-        return Math.max(0, this.state.campaigns.length - 3);
+    get hiddenPipelineCount() {
+        return Math.max(0, this.state.pipelines.length - 3);
     }
 
     /** The status holding the biggest share - the donut's centre label. */
@@ -266,8 +266,8 @@ export class SdlcCrmDashboard extends Component {
         return best && best.count ? best : null;
     }
 
-    async setCampaign(id) {
-        this.state.campaignId = id;
+    async setPipeline(id) {
+        this.state.pipelineId = id;
         this.state.loading = true;
         await this.load();
     }
@@ -371,7 +371,7 @@ export class SdlcCrmDashboard extends Component {
 
     async load() {
         const orm = this.orm;
-        const camp = this._campaign();
+        const camp = this._pipeline();
         const win = [...this._window(), ...camp];          // created in period
         const closedWin = [...this._closedWindow(), ...camp]; // closed in period
         // Open is a snapshot: every live deal, regardless of age.
@@ -380,8 +380,8 @@ export class SdlcCrmDashboard extends Component {
         const lost = [OPP, ["ac_deal_status", "=", "lost"], ...closedWin];
         // Journey events belong to a deal, so the pipeline filter reaches them
         // through the deal rather than directly.
-        const eventDomain = this.state.campaignId
-            ? [["lead_id.campaign_id", "=", this.state.campaignId]]
+        const eventDomain = this.state.pipelineId
+            ? [["lead_id.team_id", "=", this.state.pipelineId]]
             : [];
         // Lost deals are archived, so they need active_test off to be counted.
         const ARCHIVED = { context: { active_test: false } };
@@ -395,7 +395,7 @@ export class SdlcCrmDashboard extends Component {
             openValue, wonValue, lostValue,
             pLow, pMedium, pHigh, pVeryHigh,
             byStage, sentimentGroups, ownerGroups, velocityGroups, topDeals, activity,
-            campaignRows, campaignGroups,
+            pipelineRows, pipelineGroups,
             createdMonths, wonMonths, lostMonths,
         ] = await Promise.all([
             orm.searchCount("crm.lead", open),
@@ -452,11 +452,12 @@ export class SdlcCrmDashboard extends Component {
                 ["event", "lead_id", "value_to", "create_date", "user_id"],
                 { limit: 7, order: "create_date desc" }
             ),
-            // Campaigns, with their own figures - a campaign you just created
+            // Pipelines, with their own figures - a pipeline you just created
             // shows up here immediately, even before it holds a single deal.
-            orm.searchRead("utm.campaign", [], ["name"], { order: "id" }),
+            orm.searchRead("crm.team", [["use_opportunities", "=", true]], ["name"],
+                           { order: "sequence, id" }),
             orm.formattedReadGroup(
-                "crm.lead", [OPP, ["ac_deal_status", "=", "open"]], ["campaign_id"],
+                "crm.lead", [OPP, ["ac_deal_status", "=", "open"]], ["team_id"],
                 ["__count", "expected_revenue:sum"]
             ),
             // Trend: six calendar months, deliberately independent of the period
@@ -489,11 +490,11 @@ export class SdlcCrmDashboard extends Component {
             const prevClosed = [
                 ["date_closed", ">=", this._since(this.periodDays * 2)],
                 ["date_closed", "<", this._since(this.periodDays)],
-                ...this._campaign(),
+                ...this._pipeline(),
             ];
             const [prevWon, prevCreated] = await Promise.all([
                 this._sum("crm.lead", [OPP, ["ac_deal_status", "=", "won"], ...prevClosed], "expected_revenue"),
-                orm.searchCount("crm.lead", [OPP, ...prev, ...this._campaign()]),
+                orm.searchCount("crm.lead", [OPP, ...prev, ...this._pipeline()]),
             ]);
             wonTrend = this._trend(wonValue, prevWon);
             openTrend = this._trend(createdCount, prevCreated);
@@ -621,34 +622,34 @@ export class SdlcCrmDashboard extends Component {
 
         // Pipelines: counts come from the unfiltered open set, so the card is a
         // stable overview rather than a reflection of the current filter.
-        const perCampaign = {};
+        const perPipeline = {};
         let unassigned = { count: 0, value: 0 };
-        for (const g of campaignGroups) {
+        for (const g of pipelineGroups) {
             const row = { count: g.__count || 0, value: g["expected_revenue:sum"] || 0 };
-            if (g.campaign_id) {
-                perCampaign[g.campaign_id[0]] = row;
+            if (g.team_id) {
+                perPipeline[g.team_id[0]] = row;
             } else {
-                unassigned = row;   // deals that belong to no campaign yet
+                unassigned = row;   // deals that belong to no pipeline yet
             }
         }
         const maxCount = Math.max(
             1,
-            ...campaignRows.map((c) => (perCampaign[c.id] || {}).count || 0),
+            ...pipelineRows.map((c) => (perPipeline[c.id] || {}).count || 0),
             unassigned.count
         );
-        this.state.campaigns = campaignRows.map((c, idx) => ({
+        this.state.pipelines = pipelineRows.map((c, idx) => ({
             id: c.id,
             name: c.name,
-            count: (perCampaign[c.id] || {}).count || 0,
-            value: (perCampaign[c.id] || {}).value || 0,
-            pct: Math.round((((perCampaign[c.id] || {}).count || 0) / maxCount) * 100),
+            count: (perPipeline[c.id] || {}).count || 0,
+            value: (perPipeline[c.id] || {}).value || 0,
+            pct: Math.round((((perPipeline[c.id] || {}).count || 0) / maxCount) * 100),
             color: catColor(idx),
         }));
-        this.state.k.noCampaignCount = unassigned.count;
-        this.state.k.noCampaignValue = unassigned.value;
-        // A campaign deleted elsewhere should not stay selected.
-        if (this.state.campaignId && !campaignRows.some((c) => c.id === this.state.campaignId)) {
-            this.state.campaignId = null;
+        this.state.k.noPipelineCount = unassigned.count;
+        this.state.k.noPipelineValue = unassigned.value;
+        // A pipeline deleted elsewhere should not stay selected.
+        if (this.state.pipelineId && !pipelineRows.some((c) => c.id === this.state.pipelineId)) {
+            this.state.pipelineId = null;
         }
 
         this.state.trend = this._lines(this._months(TREND_MONTHS), [
@@ -742,7 +743,7 @@ export class SdlcCrmDashboard extends Component {
             type: "ir.actions.act_window",
             name,
             res_model: "crm.lead",
-            domain: [...domain, ...this._campaign()],
+            domain: [...domain, ...this._pipeline()],
             context,
             views: [[false, "list"], [false, "form"]],
         });
@@ -752,7 +753,7 @@ export class SdlcCrmDashboard extends Component {
             type: "ir.actions.act_window",
             name,
             res_model: "crm.lead",
-            domain: [...domain, ...this._window(), ...this._campaign()],
+            domain: [...domain, ...this._window(), ...this._pipeline()],
             context,
             views: [[false, "list"], [false, "form"]],
         });
@@ -788,36 +789,36 @@ export class SdlcCrmDashboard extends Component {
     openPipelines() {
         this.action.doAction("sdlc_CRM.action_sdlc_pipelines");
     }
-    /** The deals of one campaign, on the board. */
-    openCampaignBoard(id, name) {
+    /** The deals of one pipeline, on the board. */
+    openPipelineBoard(id, name) {
         this.action.doAction({
             type: "ir.actions.act_window",
             name: name,
             res_model: "crm.lead",
-            domain: [["type", "=", "opportunity"], ["campaign_id", "=", id]],
-            context: { default_campaign_id: id, default_type: "opportunity" },
+            domain: [["type", "=", "opportunity"], ["team_id", "=", id]],
+            context: { default_team_id: id, default_type: "opportunity" },
             views: [[false, "kanban"], [false, "list"], [false, "form"]],
         });
     }
     openBoard() {
         this.action.doAction("sdlc_CRM.action_sdlc_pipeline_board");
     }
-    openCampaigns() {
-        this.action.doAction("sdlc_CRM.action_sdlc_campaigns");
+    openPipelineList() {
+        this.action.doAction("sdlc_CRM.action_sdlc_pipelines");
     }
-    newCampaign() {
+    newPipeline() {
         this.action.doAction({
             type: "ir.actions.act_window",
-            name: "New campaign",
-            res_model: "utm.campaign",
+            name: "New pipeline",
+            res_model: "crm.team",
             views: [[false, "form"]],
         });
     }
     /** New deal, dropped straight into the pipeline currently being viewed. */
     newDealHere() {
         const ctx = { default_type: "opportunity" };
-        if (this.state.campaignId) {
-            ctx.default_campaign_id = this.state.campaignId;
+        if (this.state.pipelineId) {
+            ctx.default_team_id = this.state.pipelineId;
         }
         this.action.doAction({
             type: "ir.actions.act_window",

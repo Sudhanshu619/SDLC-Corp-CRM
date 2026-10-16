@@ -42,7 +42,15 @@ class CrmTeam(models.Model):
         for team in teams:
             if team.use_opportunities:
                 team._create_default_stages()
+        teams._sync_pipeline_menus()
         return teams
+
+    def write(self, vals):
+        res = super().write(vals)
+        # a renamed pipeline has to rename its menu entry too
+        if {'name', 'sequence', 'use_opportunities'} & set(vals):
+            self._sync_pipeline_menus()
+        return res
 
     def unlink(self):
         """Let a pipeline be deleted together with the stages it owns.
@@ -71,6 +79,9 @@ class CrmTeam(models.Model):
                     'instead of deleting it - archiving keeps the deals and '
                     'their history.',
                     name=team.name, count=deals))
+
+        # the menu entry goes with the pipeline, or it points at nothing
+        self._drop_pipeline_menus()
 
         stages = self.env['crm.stage'].sudo().search([('team_ids', 'in', self.ids)])
         for stage in stages:
@@ -141,30 +152,25 @@ class CrmTeam(models.Model):
             # create() builds the cycle for it
             return self.create({'name': 'Sales'})
 
-        # Stages are left UNSCOPED on purpose. Odoo only renders a stage column
-        # when the stage is shared (team_ids empty), belongs to the board's
-        # team_id, or already holds a deal (crm.lead._read_group_stage_ids), so
-        # scoping every stage to the default pipeline made a fresh board show
-        # one column and no way to drag a deal forward. Scoping is still what
-        # happens when someone creates a *second* sales process - that one gets
-        # its own cycle - but the house pipeline keeps the shared set.
-        # Odoo's crm module already ships New / Qualified / Proposition / Won,
-        # so "create the cycle only when no stage exists" never fired on a fresh
-        # install - and Negotiation was simply missing. Complete the cycle
-        # instead: add what the house cycle needs and nothing else.
+        # Every stage BELONGS to a pipeline. Odoo's _read_group_stage_ids
+        # always adds the unscoped stages (team_ids empty) to whatever board is
+        # open, so one unscoped stage would surface in every pipeline - the
+        # opposite of "each pipeline has its own stages". The house cycle is
+        # therefore adopted by the default pipeline; a second pipeline gets its
+        # own copy from create().
         pipeline._ensure_house_stages()
+        pipeline._adopt_unscoped_stages()
         pipeline._ensure_single_won_stage()
-
         pipeline._apply_stage_task_defaults()
+        pipeline._sync_pipeline_menus()
         return pipeline
 
     def _ensure_house_stages(self):
         """Make sure every stage of the house cycle exists, by name.
 
         Only the missing ones are created, so Odoo's shipped stages are kept
-        (deals already sit in them) and nothing is duplicated. New stages are
-        left unscoped, like the rest of the house cycle - see the note in
-        _ensure_default_pipeline.
+        (deals already sit in them) and nothing is duplicated. They are handed
+        to this pipeline by _adopt_unscoped_stages immediately afterwards.
         """
         Stage = self.env['crm.stage'].sudo()
         existing = {(s.name or '').strip().lower() for s in Stage.search([])}
@@ -185,6 +191,117 @@ class CrmTeam(models.Model):
             _logger.info("sdlc_CRM: added missing stage(s) %s",
                          created.mapped('name'))
         return created
+
+    def _adopt_unscoped_stages(self):
+        """Give every ownerless stage to this pipeline.
+
+        Odoo ships New / Qualified / Proposition / Won with no team, and its
+        column logic shows ownerless stages on EVERY board. Handing them to the
+        default pipeline is what makes each pipeline show only its own cycle.
+        """
+        self.ensure_one()
+        Stage = self.env['crm.stage'].sudo()
+        strays = Stage.search([('team_ids', '=', False)])
+        if strays:
+            strays.write({'team_ids': [(4, self.id)]})
+            _logger.info("sdlc_CRM: pipeline %r adopted stage(s) %s",
+                         self.display_name, strays.mapped('name'))
+        return strays
+
+    # ==================================================================
+    # "My Pipelines" menu - one entry per pipeline
+    # ==================================================================
+    def _pipeline_menu_xmlid(self):
+        self.ensure_one()
+        return 'sdlc_pipeline_menu_%s' % self.id
+
+    def _pipeline_action_xmlid(self):
+        self.ensure_one()
+        return 'sdlc_pipeline_action_%s' % self.id
+
+    def _sync_pipeline_menus(self):
+        """Create or rename the menu entry that opens this pipeline's board.
+
+        Odoo menus are plain records, so "a menu per pipeline" has to be built
+        as pipelines are created. Each entry carries a stable external id made
+        from the pipeline id - that is what lets a rename update it in place
+        and a delete clean up after itself.
+        """
+        parent = self.env.ref('sdlc_CRM.menu_sdlc_my_pipelines',
+                              raise_if_not_found=False)
+        if not parent:
+            return False
+        IMD = self.env['ir.model.data'].sudo()
+        Action = self.env['ir.actions.act_window'].sudo()
+        Menu = self.env['ir.ui.menu'].sudo()
+
+        for team in self.sudo():
+            if not team.use_opportunities:
+                continue
+            act_vals = {
+                'name': team.name,
+                'res_model': 'crm.lead',
+                'view_mode': 'kanban,list,form,pivot,graph,activity',
+                'domain': "[('type', '=', 'opportunity'), ('team_id', '=', %s)]" % team.id,
+                # default_team_id is what makes Odoo render THIS pipeline's
+                # stage columns, the empty ones included.
+                'context': ("{'default_type': 'opportunity', 'default_team_id': %s}"
+                            % team.id),
+            }
+            action = self.env.ref('sdlc_CRM.%s' % team._pipeline_action_xmlid(),
+                                  raise_if_not_found=False)
+            if action:
+                action.sudo().write(act_vals)
+            else:
+                action = Action.create(act_vals)
+                IMD.create({
+                    'module': 'sdlc_CRM',
+                    'name': team._pipeline_action_xmlid(),
+                    'model': 'ir.actions.act_window',
+                    'res_id': action.id,
+                    'noupdate': True,
+                })
+
+            menu_vals = {
+                'name': team.name,
+                'parent_id': parent.id,
+                'action': 'ir.actions.act_window,%s' % action.id,
+                # 'All Pipelines' holds sequence 1; keep the per-pipeline
+                # entries below it whatever the pipeline's own sequence is.
+                'sequence': 10 + (team.sequence or 0),
+            }
+            menu = self.env.ref('sdlc_CRM.%s' % team._pipeline_menu_xmlid(),
+                                raise_if_not_found=False)
+            if menu:
+                menu.sudo().write(menu_vals)
+            else:
+                menu = Menu.create(menu_vals)
+                IMD.create({
+                    'module': 'sdlc_CRM',
+                    'name': team._pipeline_menu_xmlid(),
+                    'model': 'ir.ui.menu',
+                    'res_id': menu.id,
+                    'noupdate': True,
+                })
+        return True
+
+    def _drop_pipeline_menus(self):
+        """Remove the menu entry and action belonging to these pipelines."""
+        for team in self.sudo():
+            for xmlid in (team._pipeline_menu_xmlid(),
+                          team._pipeline_action_xmlid()):
+                rec = self.env.ref('sdlc_CRM.%s' % xmlid, raise_if_not_found=False)
+                if rec:
+                    rec.sudo().unlink()
+                self.env['ir.model.data'].sudo().search([
+                    ('module', '=', 'sdlc_CRM'), ('name', '=', xmlid)]).unlink()
+        return True
+
+    @api.model
+    def _rebuild_pipeline_menus(self):
+        """Rebuild every pipeline's menu entry - install and migration entry."""
+        teams = self.search([('use_opportunities', '=', True)])
+        return teams._sync_pipeline_menus()
 
     def _ensure_single_won_stage(self):
         """Exactly one won stage per pipeline.

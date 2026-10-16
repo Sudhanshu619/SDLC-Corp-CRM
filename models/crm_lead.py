@@ -58,11 +58,6 @@ class CrmLead(models.Model):
     # Odoo labels this "Sales Team"; here it is the pipeline the deal sits in.
     team_id = fields.Many2one(string='Pipeline')
 
-    # Deals group under campaigns, so one is picked for you where the answer is
-    # obvious: whatever screen you came from, or the only campaign there is.
-    # The form still asks when the choice is real.
-    campaign_id = fields.Many2one(default=lambda self: self._default_campaign_id())
-
     stage_history_ids = fields.One2many('crm.stage.history', 'lead_id', string='Stage History')
     journey_event_ids = fields.One2many('crm.journey.event', 'lead_id', string='Journey Events')
     journey_event_count = fields.Integer(compute='_compute_journey_event_count')
@@ -227,20 +222,6 @@ class CrmLead(models.Model):
         return str(val)
 
     @api.model
-    def _default_campaign_id(self):
-        """The campaign a new deal lands in when nothing says otherwise.
-
-        Creating from a campaign screen already passes default_campaign_id, so
-        this only has to cover the generic board: with exactly one campaign in
-        the database there is no decision to make, and leaving the deal
-        campaign-less just hides it from every campaign view.
-        """
-        from_context = self.env.context.get('default_campaign_id')
-        if from_context:
-            return from_context
-        campaigns = self.env['utm.campaign'].search([], limit=2)
-        return campaigns.id if len(campaigns) == 1 else False
-
     def _sync_prospect_contact(self):
         """Store a deal's person in Contacts, flagged external.
 
