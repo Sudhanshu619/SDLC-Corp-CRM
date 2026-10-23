@@ -3,6 +3,8 @@
 from . import crm_stage
 from . import crm_stage_history
 from . import crm_lead
+from . import crm_lost_reason
+from . import crm_lead_lost
 from . import crm_journey_event
 from . import res_partner
 # Activity: task outcomes and the permanent completion log

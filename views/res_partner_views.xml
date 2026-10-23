@@ -58,4 +58,43 @@
         </field>
     </record>
 
+    <!-- Accounts: the companies deals belong to (crm.lead.account_id).
+         Same res.partner records as Contacts, filtered to companies, so a deal's
+         Account and this list can never drift apart. Account-specific custom
+         fields go on this list and the company form as they are specified. -->
+    <record id="res_partner_view_list_account" model="ir.ui.view">
+        <field name="name">res.partner.list.account</field>
+        <field name="model">res.partner</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <list string="Accounts" sample="1">
+                <field name="name" string="Account"/>
+                <field name="website" widget="url" optional="show"/>
+                <field name="phone" optional="show"/>
+                <field name="email" optional="show"/>
+                <field name="city" optional="show"/>
+                <field name="country_id" optional="show"/>
+                <field name="user_id" string="Owner" widget="many2one_avatar_user" optional="show"/>
+                <field name="opportunity_count" string="Deals" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_sdlc_accounts" model="ir.actions.act_window">
+        <field name="name">Accounts</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="domain">[('is_company', '=', True)]</field>
+        <field name="context">{'default_is_company': True}</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('res_partner_view_list_account')}),
+            (0, 0, {'view_mode': 'kanban'}),
+            (0, 0, {'view_mode': 'form'})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add an account</p>
+            <p>The companies your deals are with. A deal's Account is picked
+               from this list.</p>
+        </field>
+    </record>
+
 </odoo>

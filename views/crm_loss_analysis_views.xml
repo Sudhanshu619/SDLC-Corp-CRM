@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================================================================
+         Loss analysis: what a lost deal records, where it is entered and
+         where it is read back. Entered on the Mark Lost popup, shown on the
+         deal, analysed under Deals > Lost.
+         ================================================================ -->
+
+    <!-- Lost reasons carry a category, so reports group on a fixed set of
+         buckets however many reasons people add. -->
+    <record id="crm_lost_reason_view_list_sdlc" model="ir.ui.view">
+        <field name="name">crm.lost.reason.list.sdlc</field>
+        <field name="model">crm.lost.reason</field>
+        <field name="inherit_id" ref="crm.crm_lost_reason_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="loss_category"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="crm_lost_reason_view_form_sdlc" model="ir.ui.view">
+        <field name="name">crm.lost.reason.form.sdlc</field>
+        <field name="model">crm.lost.reason</field>
+        <field name="inherit_id" ref="crm.crm_lost_reason_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="loss_category"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Mark Lost popup. The competitor is mandatory only when the chosen
+         reason is a competitor loss; the re-engage date is always optional. -->
+    <record id="crm_lead_lost_view_form_loss_analysis" model="ir.ui.view">
+        <field name="name">crm.lead.lost.form.loss.analysis</field>
+        <field name="model">crm.lead.lost</field>
+        <field name="inherit_id" ref="crm.crm_lead_lost_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='lost_reason_id']" position="after">
+                <field name="loss_category" invisible="1"/>
+                <group>
+                    <field name="lost_competitor" placeholder="e.g. Salesforce"
+                           required="loss_category == 'competitor'"/>
+                    <field name="lost_reengage_date"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Deal form: the loss details, on lost deals only. -->
+    <record id="crm_lead_view_form_loss_analysis" model="ir.ui.view">
+        <field name="name">crm.lead.form.loss.analysis</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Loss Analysis" name="loss_analysis"
+                      invisible="ac_deal_status != 'lost'">
+                    <group>
+                        <group>
+                            <field name="loss_category"/>
+                            <field name="lost_stage_id"/>
+                            <field name="lc_status_change_date" string="Lost On"/>
+                        </group>
+                        <group>
+                            <field name="lost_competitor"/>
+                            <field name="lost_reengage_date"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Deals > Lost: filters and groupings for the post-mortem. -->
+    <record id="view_lost_deals_search" model="ir.ui.view">
+        <field name="name">sdlc.lost.deals.search</field>
+        <field name="model">crm.lead</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <search string="Lost Deals">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="account_id"/>
+                <field name="lost_competitor"/>
+                <field name="lost_reason_id"/>
+                <field name="user_id"/>
+                <filter name="lost_to_competitor" string="Lost to a competitor"
+                        domain="[('loss_category', '=', 'competitor')]"/>
+                <filter name="reengage_due" string="Re-engage due"
+                        domain="[('lost_reengage_date', '&lt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="lost_on" string="Lost On" date="lc_status_change_date"/>
+                <group>
+                    <filter name="group_category" string="Loss Category"
+                            context="{'group_by': 'loss_category'}"/>
+                    <filter name="group_reason" string="Lost Reason"
+                            context="{'group_by': 'lost_reason_id'}"/>
+                    <filter name="group_stage" string="Lost at Stage"
+                            context="{'group_by': 'lost_stage_id'}"/>
+                    <filter name="group_competitor" string="Competitor"
+                            context="{'group_by': 'lost_competitor'}"/>
+                    <filter name="group_rep" string="Rep"
+                            context="{'group_by': 'user_id'}"/>
+                    <filter name="group_pipeline" string="Pipeline"
+                            context="{'group_by': 'team_id'}"/>
+                    <filter name="group_month" string="Month Lost"
+                            context="{'group_by': 'lc_status_change_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+</odoo>

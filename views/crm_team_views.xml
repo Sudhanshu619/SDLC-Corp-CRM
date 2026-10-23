@@ -240,6 +240,7 @@
                 <field name="activity_ids" widget="list_activity" string="Next step" optional="show"/>
                 <field name="probability" widget="percentage" optional="hide"/>
                 <field name="ac_deal_status" string="Status" optional="hide"/>
+                <field name="lc_status_change_date" optional="hide"/>
                 <field name="company_currency" column_invisible="True"/>
             </list>
         </field>

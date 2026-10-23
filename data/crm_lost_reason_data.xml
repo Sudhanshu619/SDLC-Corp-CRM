@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Reasons covering the loss categories Odoo's three shipped reasons
+         leave empty (they are all price or fit). Editable afterwards. -->
+    <data noupdate="1">
+        <record id="lost_reason_competitor" model="crm.lost.reason">
+            <field name="name">Went with a competitor</field>
+            <field name="loss_category">competitor</field>
+        </record>
+        <record id="lost_reason_timing" model="crm.lost.reason">
+            <field name="name">Bad timing / no budget now</field>
+            <field name="loss_category">timing</field>
+        </record>
+        <record id="lost_reason_no_decision" model="crm.lost.reason">
+            <field name="name">No decision / went silent</field>
+            <field name="loss_category">no_decision</field>
+        </record>
+    </data>
+
+    <!-- Runs on every install and upgrade; only fills empty categories. -->
+    <function model="crm.lost.reason" name="_sdlc_categorise_default_reasons"/>
+</odoo>

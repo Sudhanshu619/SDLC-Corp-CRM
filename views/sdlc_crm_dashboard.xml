@@ -91,19 +91,24 @@
                 <field name="name"/>
                 <field name="partner_id"/>
                 <field name="account_id" optional="show"/>
-                <field name="stage_id"/>
+                <field name="lost_stage_id"/>
                 <field name="lost_reason_id"/>
+                <field name="loss_category" optional="show"/>
+                <field name="lost_competitor" optional="show"/>
                 <field name="expected_revenue" sum="Lost Value"/>
                 <field name="user_id"/>
-                <field name="write_date" string="Lost On" optional="show"/>
+                <field name="lc_status_change_date" string="Lost On" optional="show"/>
+                <field name="lost_reengage_date" optional="show"/>
+                <field name="team_id" string="Pipeline" optional="hide"/>
             </list>
         </field>
     </record>
     <record id="action_lost_deals" model="ir.actions.act_window">
         <field name="name">Lost Deals</field>
         <field name="res_model">crm.lead</field>
-        <field name="view_mode">list,form</field>
+        <field name="view_mode">list,pivot,graph,form</field>
         <field name="view_id" ref="view_lost_deals_list"/>
+        <field name="search_view_id" ref="view_lost_deals_search"/>
         <field name="domain">[('type', '=', 'opportunity'), ('ac_deal_status', '=', 'lost')]</field>
         <field name="context">{'active_test': False, 'create': False}</field>
         <field name="help" type="html">

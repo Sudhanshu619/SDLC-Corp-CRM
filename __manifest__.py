@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'SDLC Sales CRM (ActiveCampaign-style)',
-    'version': '19.0.2.10.0',
+    'version': '19.0.2.11.0',
     'category': 'Sales/CRM',
     'summary': 'Sales CRM: leads and multi-contact deals, per-deal currency, stage '
                'history and velocity, task outcomes & sentiment, and a '
@@ -46,12 +46,14 @@ integration.
         'security/ir.model.access.csv',
         'data/crm_activity_type_data.xml',
         'data/crm_activity_outcome_data.xml',
+        'data/crm_lost_reason_data.xml',
         'data/crm_team_data.xml',
         'data/crm_leads_data.xml',
         'data/base_automation_data.xml',
         'data/sdlc_crm_admin.xml',
         'data/sdlc_crm_lockdown.xml',
         'views/crm_lead_views.xml',
+        'views/crm_loss_analysis_views.xml',
         'views/res_partner_views.xml',
         'views/crm_team_views.xml',
         'views/crm_stage_views.xml',

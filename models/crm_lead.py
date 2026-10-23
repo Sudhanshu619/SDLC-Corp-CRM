@@ -54,6 +54,25 @@ class CrmLead(models.Model):
         [('open', 'Open'), ('won', 'Won'), ('lost', 'Lost')],
         string='Deal Status', compute='_compute_ac_deal_status',
         store=True, index=True, tracking=True)
+    lc_status_change_date = fields.Date(
+        string='LC - Status Change', readonly=True, copy=False, tracking=True,
+        help="Date the deal status (Open/Won/Lost) last changed. Every status "
+             "change overwrites it; blank until the first change.")
+
+    # ------------------------------------------------------------------
+    # Loss analysis. Captured on the Mark Lost popup (crm.lead.lost), except
+    # the stage, which is snapshotted automatically: a lost deal keeps its
+    # stage_id, but nothing stops someone moving the card afterwards.
+    # ------------------------------------------------------------------
+    loss_category = fields.Selection(
+        related='lost_reason_id.loss_category', store=True, string='Loss Category')
+    lost_competitor = fields.Char('Lost To (Competitor)', tracking=True)
+    lost_reengage_date = fields.Date(
+        'Re-engage On', tracking=True,
+        help="When to approach this account again.")
+    lost_stage_id = fields.Many2one(
+        'crm.stage', string='Lost at Stage', readonly=True, copy=False,
+        help="Stage the deal was in when it was marked Lost.")
 
     # Odoo labels this "Sales Team"; here it is the pipeline the deal sits in.
     team_id = fields.Many2one(string='Pipeline')
@@ -143,6 +162,7 @@ class CrmLead(models.Model):
             } for l in self
         }
         res = super().write(vals)
+        status_changed = self.browse()
         if {'contact_name', 'email_from', 'phone', 'partner_name', 'type'} & set(vals):
             # details filled in later, or a lead just became a deal
             self._sync_prospect_contact()
@@ -185,9 +205,20 @@ class CrmLead(models.Model):
                     'value_changed',
                     frm=before.get('revenue'), to=lead.expected_revenue)
             if lead.ac_deal_status != before.get('status'):
+                status_changed |= lead
                 lead._fire_journey_event(
                     'status_changed',
                     frm=before.get('status'), to=lead.ac_deal_status)
+        if status_changed:
+            # Steve's 'LC - Status Change': any Open/Won/Lost transition
+            # overwrites it. The nested write leaves the status untouched, so
+            # it does not land back here. A loss also snapshots the stage.
+            today = fields.Date.context_today(self)
+            for lead in status_changed:
+                vals = {'lc_status_change_date': today}
+                if lead.ac_deal_status == 'lost':
+                    vals['lost_stage_id'] = lead.stage_id.id
+                lead.write(vals)
         return res
 
     # ==================================================================

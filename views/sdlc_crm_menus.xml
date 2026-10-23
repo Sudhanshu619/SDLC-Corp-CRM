@@ -12,6 +12,7 @@
              2  Campaigns      what a deal belongs to
              3  Activities     what I owe someone today
              4  Contacts       who we deal with
+             5  Accounts       the companies those deals are with
             20  Reporting      native reports + this module's, in ONE menu
             90  Configuration  last, as configuration should be
 
@@ -116,6 +117,12 @@
         <field name="parent_id" ref="crm.crm_menu_root"/>
         <field name="sequence">4</field>
     </record>
+
+    <menuitem id="menu_sdlc_accounts"
+              name="Accounts"
+              parent="crm.crm_menu_root"
+              action="action_sdlc_accounts"
+              sequence="5"/>
 
     <record id="crm.crm_menu_sales" model="ir.ui.menu">
         <field name="active" eval="False"/>
