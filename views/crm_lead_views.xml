@@ -10,6 +10,17 @@
         <field name="inherit_id" ref="crm.crm_lead_view_form"/>
         <field name="arch" type="xml">
 
+            <!-- Deal status pill between Won and Lost: green while open,
+                 red once lost. Display only: disabled, no action. -->
+            <xpath expr="//header/button[@name='action_set_won_rainbowman']" position="after">
+                <button string="Open" class="btn-success pe-none" disabled="1"
+                        invisible="ac_deal_status != 'open'"/>
+                <button string="Lost" class="btn-danger pe-none" disabled="1"
+                        invisible="ac_deal_status != 'lost'"/>
+                <button string="Won" class="btn-success pe-none" disabled="1"
+                        invisible="ac_deal_status != 'won'"/>
+            </xpath>
+
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button class="oe_stat_button" type="object" icon="fa-history"
                         name="action_view_stage_history"
