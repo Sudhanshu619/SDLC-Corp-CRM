@@ -5,7 +5,6 @@
              0  Dashboard      where the day starts
              1  Deals          everything about deals, in one section
                    Pipeline        the board: deals moving through stages
-                   Opportunities   the same deals as a table
                    My Deals        the ones assigned to me
                    Won             what landed
                    Lost            what did not, and why
@@ -57,12 +56,6 @@
               parent="menu_sdlc_deals"
               action="action_sdlc_new_deal"
               sequence="1"/>
-
-    <menuitem id="menu_sdlc_opportunities"
-              name="Opportunities"
-              parent="menu_sdlc_deals"
-              action="action_sdlc_opportunities"
-              sequence="2"/>
 
     <menuitem id="menu_sdlc_my_deals"
               name="My Deals"
