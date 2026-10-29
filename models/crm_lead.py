@@ -58,6 +58,10 @@ class CrmLead(models.Model):
         string='LC - Status Change', readonly=True, copy=False, tracking=True,
         help="Date the deal status (Open/Won/Lost) last changed. Every status "
              "change overwrites it; blank until the first change.")
+    demo_date = fields.Date(
+        string='Demo Date', copy=False, tracking=True,
+        help="Set to the day the deal enters a Demo stage; re-entering one "
+             "overwrites it. Can be edited by hand.")
 
     # ------------------------------------------------------------------
     # Loss analysis. Captured on the Mark Lost popup (crm.lead.lost), except
@@ -148,6 +152,7 @@ class CrmLead(models.Model):
                     # non-manager moving/creating a deal must not need direct
                     # create rights on crm.stage.history.
                     self.env['crm.stage.history'].sudo()._log_transition(lead, previous_stage=False)
+        leads.filtered(lambda l: l.stage_id.is_demo and not l.demo_date)._stamp_demo_date()
         return leads
 
     def write(self, vals):
@@ -163,6 +168,7 @@ class CrmLead(models.Model):
         }
         res = super().write(vals)
         status_changed = self.browse()
+        entered_demo = self.browse()
         if {'contact_name', 'email_from', 'phone', 'partner_name', 'type'} & set(vals):
             # details filled in later, or a lead just became a deal
             self._sync_prospect_contact()
@@ -180,6 +186,9 @@ class CrmLead(models.Model):
             # "change stage" (same rule as create, blueprint C4 #14). Without
             # this, a converted lead would carry no stage history at all.
             converted = before.get('type') == 'lead'
+            if (lead.stage_id.is_demo and lead.stage_id != before.get('stage')
+                    and 'demo_date' not in vals):
+                entered_demo |= lead
             if converted:
                 lead._fire_journey_event('enters_pipeline', to=lead.team_id.display_name)
                 if lead.stage_id:
@@ -219,11 +228,18 @@ class CrmLead(models.Model):
                 if lead.ac_deal_status == 'lost':
                     vals['lost_stage_id'] = lead.stage_id.id
                 lead.write(vals)
+        entered_demo._stamp_demo_date()
         return res
 
     # ==================================================================
     # Helpers
     # ==================================================================
+    def _stamp_demo_date(self):
+        """Record today as the Demo Date of deals that just reached a Demo
+        stage. The nested write keeps the stage, so it does not re-trigger."""
+        if self:
+            self.write({'demo_date': fields.Date.context_today(self)})
+
     def _sync_primary_contact(self):
         """Enforce AC's invariant: the primary contact is always a member of
         the deal's contact set."""

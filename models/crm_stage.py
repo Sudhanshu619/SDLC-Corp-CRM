@@ -27,6 +27,10 @@ class CrmStage(models.Model):
         string='Task Due In (days)', default=2,
         help="Due date offset for the auto-created stage task.")
 
+    is_demo = fields.Boolean(
+        string='Demo Stage',
+        help="A deal entering this stage gets today's date as its Demo Date.")
+
     @api.model
     def default_get(self, fields_list):
         """A stage created from inside a pipeline belongs to that pipeline.

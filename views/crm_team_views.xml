@@ -237,6 +237,7 @@
                 <field name="expected_revenue" string="Deal value" sum="Pipeline"/>
                 <field name="prorated_revenue" string="Weighted" sum="Weighted" optional="hide"/>
                 <field name="date_deadline" string="Expected closing" optional="show"/>
+                <field name="demo_date" optional="show"/>
                 <field name="activity_ids" widget="list_activity" string="Next step" optional="show"/>
                 <field name="probability" widget="percentage" optional="hide"/>
                 <field name="ac_deal_status" string="Status" optional="hide"/>
